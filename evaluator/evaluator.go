@@ -250,6 +250,9 @@ func evalAssignExpression(node *ast.AssignExpression, env *object.Environment) o
 			case "=":
 				newVal = val
 			}
+			if isError(newVal) {
+				return newVal
+			}
 			env.Set(ident.Value, newVal)
 			return newVal
 		} else {

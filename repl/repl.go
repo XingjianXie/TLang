@@ -53,7 +53,7 @@ func Start(in io.Reader, out io.Writer) {
 
 		program := p.ParseProgram()
 		if len(p.Errors()) != 0 {
-			printParserErrors(out, p.Errors())
+			PrintParserErrors(out, p.Errors())
 			continue
 		}
 
@@ -65,7 +65,7 @@ func Start(in io.Reader, out io.Writer) {
 	}
 }
 
-func printParserErrors(out io.Writer, errors []string) {
+func PrintParserErrors(out io.Writer, errors []string) {
 	_, _ = io.WriteString(out, T_LANG)
 	_, _ = io.WriteString(out, "Woops! Here are something wrong.\n")
 	_, _ = io.WriteString(out, " parser errors:\n")

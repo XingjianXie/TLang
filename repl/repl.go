@@ -11,30 +11,6 @@ import (
 )
 
 const PROMPT = "T> "
-const T_LANG = `                                                         
-            uuuuuuuuuuuuuuuuuuuuuuuuuuuu
-          u" uuuuuuuuuuuuuuuuuuuuuuuuuu "u
-        u" u$$$$$$$$$$$$$$$$$$$$$$$$$$$$u "u
-      u" u$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$u "u
-    u" u$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$u "u
-  u" u$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$u "u
-u" u$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$u "u
-$ $$$$$$$$$                              $$$$$$$$$ $
-$ $$$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$$$ $
-$ $$$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$$$ $
-$ $$$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$$$ $
-$ $$$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$$$ $
-$ $$$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$$$ $
-$ $$$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$$$ $
-$ $$$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$$$ $
-"u "$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$" u"
-  "u "$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$" u"
-    "u "$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$" u"
-      "u "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$" u"
-        "u "$$$$$$$$$$$$$$$$$$$$$$$$$$$$" u"
-          "u """""""""""""""""""""""""" u"
-            """"""""""""""""""""""""""""
-`
 
 func Start(in io.Reader, out io.Writer) {
 	scanner := bufio.NewScanner(in)
@@ -53,23 +29,14 @@ func Start(in io.Reader, out io.Writer) {
 
 		program := p.ParseProgram()
 		if len(p.Errors()) != 0 {
-			PrintParserErrors(out, p.Errors())
+			evaluator.PrintParserErrors(out, p.Errors())
 			continue
 		}
 
 		evaluated := evaluator.Eval(program, env)
-		if evaluated != nil {
+		if evaluated != evaluator.VOID {
 			_, _ = io.WriteString(out, evaluated.Inspect())
 			_, _ = io.WriteString(out, "\n")
 		}
-	}
-}
-
-func PrintParserErrors(out io.Writer, errors []string) {
-	_, _ = io.WriteString(out, T_LANG)
-	_, _ = io.WriteString(out, "Woops! Here are something wrong.\n")
-	_, _ = io.WriteString(out, " parser errors:\n")
-	for _, msg := range errors {
-		_, _ = io.WriteString(out, "\t"+msg+"\n")
 	}
 }

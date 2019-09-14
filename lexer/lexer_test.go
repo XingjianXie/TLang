@@ -18,6 +18,9 @@ func TestNextToken(t *testing.T) {
 8<8/
 9/=9
 10*=10
+"Hello World"
+"123"
+""
 `
 
 	tests := []struct {
@@ -66,6 +69,10 @@ func TestNextToken(t *testing.T) {
 		{token.NUMBER, "10"},
 		{token.ASTERISK_EQ, "*="},
 		{token.NUMBER, "10"},
+
+		{token.STRING, "Hello World"},
+		{token.STRING, "123"},
+		{token.STRING, ""},
 
 		{token.EOF, ""},
 	}

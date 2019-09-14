@@ -2,9 +2,14 @@ package evaluator
 
 import (
 	"TProject/ast"
+	"TProject/lexer"
 	"TProject/object"
+	"TProject/parser"
 	"fmt"
+	"io"
 	"math"
+	"os"
+	"strconv"
 )
 
 var (
@@ -13,12 +18,184 @@ var (
 	VOID  = &object.Void{}
 )
 
+const T_LANG = `                                                         
+            uuuuuuuuuuuuuuuuuuuuuuuuuuuu
+          u" uuuuuuuuuuuuuuuuuuuuuuuuuu "u
+        u" u$$$$$$$$$$$$$$$$$$$$$$$$$$$$u "u
+      u" u$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$u "u
+    u" u$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$u "u
+  u" u$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$u "u
+u" u$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$u "u
+$ $$$$$$$$$                              $$$$$$$$$ $
+$ $$$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$$$ $
+$ $$$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$$$ $
+$ $$$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$$$ $
+$ $$$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$$$ $
+$ $$$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$$$ $
+$ $$$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$$$ $
+$ $$$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$$$ $
+$ $$$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$$$ $
+$ $$$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$$$ $
+"u "$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$" u"
+  "u "$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$" u"
+    "u "$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$" u"
+      "u "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$" u"
+        "u "$$$$$$$$$$$$$$$$$$$$$$$$$$$$" u"
+          "u """""""""""""""""""""""""" u"
+            """"""""""""""""""""""""""""
+`
+
+func PrintParserErrors(out io.Writer, errors []string) {
+	_, _ = io.WriteString(out, T_LANG)
+	_, _ = io.WriteString(out, "Woops! Here are something wrong.\n")
+	_, _ = io.WriteString(out, " parser errors:\n")
+	for _, msg := range errors {
+		_, _ = io.WriteString(out, "\t"+msg+"\n")
+	}
+}
+
+func init() {
+	LEN = func(env *object.Environment, args []object.Object) object.Object {
+		if len(args) != 1 {
+			return newError("native function len: len(args) should be 1")
+		}
+		switch arg := args[0].(type) {
+		case *object.String:
+			return &object.Integer{Value: int64(len(arg.Value))}
+		default:
+			return newError("native function len: args[0] should be String")
+		}
+	}
+	PRINT = func(env *object.Environment, args []object.Object) object.Object {
+		for _, arg := range args {
+			fmt.Println(STRING(env, []object.Object{arg}).(*object.String).Value)
+		}
+		return VOID
+	}
+	STRING = func(env *object.Environment, args []object.Object) object.Object {
+		if len(args) != 1 {
+			return newError("native function string: len(args) should be 1")
+		}
+		if str, ok := args[0].(*object.String); ok {
+			return str
+		}
+		return &object.String{Value: args[0].Inspect()}
+	}
+	EXIT = func(env *object.Environment, args []object.Object) object.Object {
+		if len(args) != 1 && len(args) != 0 {
+			return newError("native function exit: len(args) should be 1 or 0")
+		}
+
+		if len(args) == 1 {
+			if val, ok := args[0].(*object.Integer); ok {
+				os.Exit(int(val.Value))
+			}
+			return newError("native function len: args[0] should be Integer")
+		}
+		os.Exit(0)
+		return VOID
+	}
+	EVAL = func(env *object.Environment, args []object.Object) object.Object {
+		if len(args) != 1 {
+			return newError("native function eval: len(args) should be 1")
+		}
+
+		if str, ok := args[0].(*object.String); ok {
+			l := lexer.New(str.Value)
+			p := parser.New(l)
+
+			program := p.ParseProgram()
+			if len(p.Errors()) != 0 {
+				PrintParserErrors(os.Stdout, p.Errors())
+				return newError("error inner eval")
+			}
+
+			return Eval(program, env)
+		}
+
+		return newError("native function eval: args[0] should be String")
+	}
+	INT = func(env *object.Environment, args []object.Object) object.Object {
+		if len(args) != 1 {
+			return newError("native function int: len(args) should be 1")
+		}
+		switch arg := args[0].(type) {
+		case *object.String:
+			val, err := strconv.ParseInt(arg.Value, 10, 64)
+			if err != nil {
+				return newError("could not parse %s as integer", arg.Value)
+			}
+			return &object.Integer{Value: val}
+		case *object.Boolean:
+			if arg.Value {
+				return &object.Integer{Value: 1}
+			} else {
+				return &object.Integer{Value: 0}
+			}
+		case *object.Float:
+			return &object.Integer{Value: int64(arg.Value)}
+		case *object.Integer:
+			return arg
+		default:
+			return newError("native function int: args[0] should be String, Boolean or Number")
+		}
+	}
+
+	FLOAT = func(env *object.Environment, args []object.Object) object.Object {
+		if len(args) != 1 {
+			return newError("native function float: len(args) should be 1")
+		}
+		switch arg := args[0].(type) {
+		case *object.String:
+			val, err := strconv.ParseFloat(arg.Value, 64)
+			if err != nil {
+				return newError("could not parse %s as float", arg.Value)
+			}
+			return &object.Float{Value: val}
+		case *object.Boolean:
+			if arg.Value {
+				return &object.Float{Value: 1.}
+			} else {
+				return &object.Float{Value: 0.}
+			}
+		case *object.Integer:
+			return &object.Float{Value: float64(arg.Value)}
+		case *object.Float:
+			return arg
+		default:
+			return newError("native function int: args[0] should be String, Boolean or Number")
+		}
+	}
+
+	natives = map[string]*object.Native{
+		"len":    {LEN},
+		"print":  {PRINT},
+		"string": {STRING},
+		"exit":   {EXIT},
+		"eval":   {EVAL},
+		"int":    {INT},
+		"float":  {FLOAT},
+	}
+}
+
+var (
+	LEN    object.NativeFunction
+	PRINT  object.NativeFunction
+	STRING object.NativeFunction
+	EXIT   object.NativeFunction
+	EVAL   object.NativeFunction
+	INT    object.NativeFunction
+	FLOAT  object.NativeFunction
+)
+
+var natives map[string]*object.Native
+
 func newError(format string, a ...interface{}) *object.Err {
 	return &object.Err{Message: fmt.Sprintf(format, a...)}
 }
 
 func isError(obj object.Object) bool {
-	if obj != nil {
+	if obj != VOID {
 		return obj.Type() == object.ERR
 	}
 	return false
@@ -40,6 +217,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return &object.Integer{Value: node.Value}
 	case *ast.FloatLiteral:
 		return &object.Float{Value: node.Value}
+	case *ast.StringLiteral:
+		return &object.String{Value: node.Value}
 	case *ast.BooleanLiteral:
 		return nativeBoolToBooleanObject(node.Value)
 	case *ast.Identifier:
@@ -82,7 +261,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			return val
 		}
 		if _, ok := env.Get(node.Name.Value); ok {
-			return newError("identifier " + node.Name.Value + " already set")
+			return newError("identifier %s already set", node.Name.Value)
 		} else {
 			env.Set(node.Name.Value, val)
 		}
@@ -110,21 +289,24 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			return args[0]
 		}
 
-		return applyFunction(function, args)
+		return applyFunction(function, args, env)
 	}
 
-	return nil
+	return VOID
 }
 
-func applyFunction(fn object.Object, args []object.Object) object.Object {
-	function, ok := fn.(*object.Function)
-	if !ok {
-		return newError("not a function: %s", fn.Type())
+func applyFunction(fn object.Object, args []object.Object, env *object.Environment) object.Object {
+	if function, ok := fn.(*object.Function); ok {
+		extendedEnv := extendFunctionEnv(function, args)
+		evaluated := Eval(function.Body, extendedEnv)
+		return unwrapReturnValue(evaluated)
 	}
 
-	extendedEnv := extendFunctionEnv(function, args)
-	evaluated := Eval(function.Body, extendedEnv)
-	return unwrapReturnValue(evaluated)
+	if native, ok := fn.(*object.Native); ok {
+		return native.Fn(env, args)
+	}
+
+	return newError("not a function or a native function: %s", fn.Type())
 }
 
 func extendFunctionEnv(
@@ -173,16 +355,19 @@ func evalIdentifier(
 	node *ast.Identifier,
 	env *object.Environment,
 ) object.Object {
-	val, ok := env.Get(node.Value)
-	if !ok {
-		return newError("identifier not found: " + node.Value)
+	if val, ok := env.Get(node.Value); ok {
+		return val
 	}
 
-	return val
+	if native, ok := natives[node.Value]; ok {
+		return native
+	}
+
+	return newError("identifier not found: " + node.Value)
 }
 
 func evalProgram(program *ast.Program, env *object.Environment) object.Object {
-	var result object.Object
+	var result object.Object = VOID
 
 	for _, statement := range program.Statements {
 		result = Eval(statement, env)
@@ -199,12 +384,12 @@ func evalProgram(program *ast.Program, env *object.Environment) object.Object {
 }
 
 func evalBlockStatement(block *ast.BlockStatement, env *object.Environment) object.Object {
-	var result object.Object
+	var result object.Object = VOID
 
 	for _, statement := range block.Statements {
 		result = Eval(statement, env)
 
-		if result != nil {
+		if result != VOID {
 			rt := result.Type()
 			if rt == object.RET || rt == object.ERR {
 				return result
@@ -282,8 +467,15 @@ func evalInfixExpression(
 		return newError("type mismatch: %s %s %s",
 			left.Type(), operator, right.Type())
 
-	default:
+	case left.Type() == object.STRING:
+		if right.Type() == object.STRING {
+			return evalStringInfixExpression(operator, left.(*object.String), right.(*object.String))
+		}
 		return newError("type mismatch: %s %s %s",
+			left.Type(), operator, right.Type())
+
+	default:
+		return newError("unknown operator: %s %s %s",
 			left.Type(), operator, right.Type())
 	}
 }
@@ -301,6 +493,23 @@ func evalBooleanInfixExpression(
 		return nativeBoolToBooleanObject(left.Value && right.Value)
 	case "or":
 		return nativeBoolToBooleanObject(left.Value || right.Value)
+	default:
+		return newError("unknown operator: %s %s %s",
+			left.Type(), operator, right.Type())
+	}
+}
+
+func evalStringInfixExpression(
+	operator string,
+	left, right *object.String,
+) object.Object {
+	switch operator {
+	case "==":
+		return nativeBoolToBooleanObject(left.Value == right.Value)
+	case "!=":
+		return nativeBoolToBooleanObject(left.Value != right.Value)
+	case "+":
+		return &object.String{Value: left.Value + right.Value}
 	default:
 		return newError("unknown operator: %s %s %s",
 			left.Type(), operator, right.Type())

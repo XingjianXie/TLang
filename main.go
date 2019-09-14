@@ -25,7 +25,7 @@ func main() {
 
 		program := p.ParseProgram()
 		if len(p.Errors()) != 0 {
-			repl.PrintParserErrors(os.Stderr, p.Errors())
+			evaluator.PrintParserErrors(os.Stderr, p.Errors())
 			os.Exit(1)
 		}
 

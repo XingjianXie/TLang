@@ -35,6 +35,7 @@ const (
 	// Identifiers + literals
 	IDENT  = "IDENT"  // add, foobar, x, y, ...
 	NUMBER = "NUMBER" // 1343456
+	STRING = "STRING" // "Hello World"
 
 	// Operators
 	ASSIGN     = "="

@@ -354,6 +354,52 @@ func TestFunctionApplication(t *testing.T) {
 		{"let add = func(x, y) { x + y; }; add(5, 5);", 10},
 		{"let add = func(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20},
 		{"func(x) { x; }(5);", 5},
+		{"let t = func(x) { x + 1; }; t(t(t(1)));", 4},
+	}
+
+	for _, tt := range tests {
+		testIntegerObject(t, testEval(tt.input), tt.expected)
+	}
+}
+
+func TestStringLiteral(t *testing.T) {
+	input := `"Hello World!";`
+
+	evaluated := testEval(input)
+	str, ok := evaluated.(*object.String)
+	if !ok {
+		t.Fatalf("object is not String. got=%T (%+v)", evaluated, evaluated)
+	}
+
+	if str.Value != "Hello World!" {
+		t.Errorf("String has wrong value. got=%q", str.Value)
+	}
+}
+
+func TestStringConcatenation(t *testing.T) {
+	input := `"Hello" + " " + "World!";`
+
+	evaluated := testEval(input)
+	str, ok := evaluated.(*object.String)
+	if !ok {
+		t.Fatalf("object is not String. got=%T (%+v)", evaluated, evaluated)
+	}
+
+	if str.Value != "Hello World!" {
+		t.Errorf("String has wrong value. got=%q", str.Value)
+	}
+}
+
+func TestConvertFunctions(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected int64
+	}{
+		{"int(\"123\");", 123},
+		{"int(float(\"123.3\"));", 123},
+		{"int(float(\"123.222\"));", 123},
+		{"int(float(\"122.9\"));", 122},
+		{"int(string(int(\"123\") + 4) + \"2\");", 1272},
 	}
 
 	for _, tt := range tests {

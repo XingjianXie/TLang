@@ -13,10 +13,12 @@ const (
 	INTEGER  = "INTEGER"
 	FLOAT    = "FLOAT"
 	BOOLEAN  = "BOOLEAN"
+	STRING   = "STRING"
 	VOID     = "VOID"
 	RET      = "RET"
 	ERR      = "ERR"
 	FUNCTION = "FUNCTION"
+	NATIVE   = "NATIVE"
 )
 
 type Object interface {
@@ -95,3 +97,20 @@ func (f *Function) Inspect() string {
 
 	return out.String()
 }
+
+type String struct {
+	Value string
+}
+
+func (s *String) Type() Type      { return STRING }
+func (s *String) IsNumber() bool  { return false }
+func (s *String) Inspect() string { return "\"" + s.Value + "\"" }
+
+type NativeFunction func(env *Environment, args []Object) Object
+type Native struct {
+	Fn NativeFunction
+}
+
+func (n *Native) Type() Type      { return NATIVE }
+func (n *Native) IsNumber() bool  { return false }
+func (n *Native) Inspect() string { return "func [Native]" }

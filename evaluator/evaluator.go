@@ -167,25 +167,34 @@ func init() {
 		}
 	}
 
+	BOOLEAN = func(env *object.Environment, args []object.Object) object.Object {
+		if len(args) != 1 {
+			return newError("native function float: len(args) should be 1")
+		}
+		return booleanify(args[0])
+	}
+
 	natives = map[string]*object.Native{
-		"len":    {LEN},
-		"print":  {PRINT},
-		"string": {STRING},
-		"exit":   {EXIT},
-		"eval":   {EVAL},
-		"int":    {INT},
-		"float":  {FLOAT},
+		"len":     {LEN},
+		"print":   {PRINT},
+		"string":  {STRING},
+		"exit":    {EXIT},
+		"eval":    {EVAL},
+		"int":     {INT},
+		"float":   {FLOAT},
+		"boolean": {BOOLEAN},
 	}
 }
 
 var (
-	LEN    object.NativeFunction
-	PRINT  object.NativeFunction
-	STRING object.NativeFunction
-	EXIT   object.NativeFunction
-	EVAL   object.NativeFunction
-	INT    object.NativeFunction
-	FLOAT  object.NativeFunction
+	LEN     object.NativeFunction
+	PRINT   object.NativeFunction
+	STRING  object.NativeFunction
+	EXIT    object.NativeFunction
+	EVAL    object.NativeFunction
+	INT     object.NativeFunction
+	FLOAT   object.NativeFunction
+	BOOLEAN object.NativeFunction
 )
 
 var natives map[string]*object.Native
@@ -727,13 +736,13 @@ func booleanify(number object.Object) object.Object {
 		return FALSE
 	case object.FLOAT:
 		if number.(*object.Float).Value != 0 && !math.IsNaN(number.(*object.Float).Value) {
-			return FALSE
+			return TRUE
 		}
-		return TRUE
+		return FALSE
 	case object.BOOLEAN:
 		return number
 	case object.VOID:
 		return FALSE
 	}
-	return VOID
+	return newError("could not parse %s as boolean", number.Inspect())
 }

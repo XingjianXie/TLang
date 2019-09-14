@@ -400,6 +400,8 @@ func TestConvertFunctions(t *testing.T) {
 		{"int(float(\"123.222\"));", 123},
 		{"int(float(\"122.9\"));", 122},
 		{"int(string(int(\"123\") + 4) + \"2\");", 1272},
+		{"int(boolean(1));", 1},
+		{"int(boolean(float(\"Nan\")));", 0},
 	}
 
 	for _, tt := range tests {

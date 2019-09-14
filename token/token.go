@@ -10,6 +10,7 @@ type Token struct {
 var keywords = map[string]Type{
 	"func":  FUNCTION,
 	"let":   LET,
+	"ref":   REF,
 	"true":  TRUE,
 	"false": FALSE,
 	"if":    IF,
@@ -66,14 +67,17 @@ const (
 	COMMA     = ","
 	SEMICOLON = ";"
 
-	LPAREN = "("
-	RPAREN = ")"
-	LBRACE = "{"
-	RBRACE = "}"
+	LPAREN   = "("
+	RPAREN   = ")"
+	LBRACE   = "{"
+	RBRACE   = "}"
+	LBRACKET = "["
+	RBRACKET = "]"
 
 	// Keywords
 	FUNCTION  = "FUNCTION"
 	LET       = "LET"
+	REF       = "REF"
 	TRUE      = "TRUE"
 	FALSE     = "FALSE"
 	IF        = "IF"

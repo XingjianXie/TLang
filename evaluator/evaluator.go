@@ -59,7 +59,7 @@ func init() {
 		if len(args) != 1 {
 			return newError("native function len: len(args) should be 1")
 		}
-		switch arg := args[0].(type) {
+		switch arg := unwrapReferenceValue(args[0]).(type) {
 		case *object.String:
 			return &object.Integer{Value: int64(len(arg.Value))}
 		default:
@@ -68,7 +68,7 @@ func init() {
 	}
 	PRINT = func(env *object.Environment, args []object.Object) object.Object {
 		for _, arg := range args {
-			fmt.Println(STRING(env, []object.Object{arg}).(*object.String).Value)
+			fmt.Println(STRING(env, []object.Object{unwrapReferenceValue(arg)}).(*object.String).Value)
 		}
 		return VOID
 	}
@@ -76,7 +76,7 @@ func init() {
 		if len(args) != 1 {
 			return newError("native function string: len(args) should be 1")
 		}
-		if str, ok := args[0].(*object.String); ok {
+		if str, ok := unwrapReferenceValue(args[0]).(*object.String); ok {
 			return str
 		}
 		return &object.String{Value: args[0].Inspect()}
@@ -87,7 +87,7 @@ func init() {
 		}
 
 		if len(args) == 1 {
-			if val, ok := args[0].(*object.Integer); ok {
+			if val, ok := unwrapReferenceValue(args[0]).(*object.Integer); ok {
 				os.Exit(int(val.Value))
 			}
 			return newError("native function len: args[0] should be Integer")
@@ -100,7 +100,7 @@ func init() {
 			return newError("native function eval: len(args) should be 1")
 		}
 
-		if str, ok := args[0].(*object.String); ok {
+		if str, ok := unwrapReferenceValue(args[0]).(*object.String); ok {
 			l := lexer.New(str.Value)
 			p := parser.New(l)
 
@@ -174,6 +174,16 @@ func init() {
 		return booleanify(args[0])
 	}
 
+	FETCH = func(env *object.Environment, args []object.Object) object.Object {
+		if len(args) != 1 {
+			return newError("native function fetch: len(args) should be 1")
+		}
+		if err, ok := args[0].(*object.Err); ok {
+			return &object.String{Value: err.Inspect()}
+		}
+		return args[0]
+	}
+
 	natives = map[string]*object.Native{
 		"len":     {LEN},
 		"print":   {PRINT},
@@ -183,18 +193,20 @@ func init() {
 		"int":     {INT},
 		"float":   {FLOAT},
 		"boolean": {BOOLEAN},
+		"fetch":   {FETCH},
 	}
 }
 
 var (
-	LEN     object.NativeFunction
-	PRINT   object.NativeFunction
-	STRING  object.NativeFunction
-	EXIT    object.NativeFunction
-	EVAL    object.NativeFunction
-	INT     object.NativeFunction
-	FLOAT   object.NativeFunction
-	BOOLEAN object.NativeFunction
+	LEN     func(env *object.Environment, args []object.Object) object.Object
+	PRINT   func(env *object.Environment, args []object.Object) object.Object
+	STRING  func(env *object.Environment, args []object.Object) object.Object
+	EXIT    func(env *object.Environment, args []object.Object) object.Object
+	EVAL    func(env *object.Environment, args []object.Object) object.Object
+	INT     func(env *object.Environment, args []object.Object) object.Object
+	FLOAT   func(env *object.Environment, args []object.Object) object.Object
+	BOOLEAN func(env *object.Environment, args []object.Object) object.Object
+	FETCH   func(env *object.Environment, args []object.Object) object.Object
 )
 
 var natives map[string]*object.Native
@@ -220,7 +232,7 @@ func nativeBoolToBooleanObject(input bool) *object.Boolean {
 func Eval(node ast.Node, env *object.Environment) object.Object {
 	switch node := node.(type) {
 	case *ast.Program:
-		return evalProgram(node, env)
+		return unwrapReferenceValue(evalProgram(node, env))
 
 	case *ast.IntegerLiteral:
 		return &object.Integer{Value: node.Value}
@@ -232,28 +244,65 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return nativeBoolToBooleanObject(node.Value)
 	case *ast.Identifier:
 		return evalIdentifier(node, env)
+	case *ast.FunctionLiteral:
+		params := node.Parameters
+		body := node.Body
+		return &object.Function{Parameters: params, Env: env, Body: body}
+	case *ast.ArrayLiteral:
+		elements := evalExpressions(node.Elements, env, false)
+		if len(elements) == 1 && isError(elements[0]) {
+			return elements[0]
+		}
+		return &object.Array{Elements: elements}
 
 	case *ast.PrefixExpression:
-		right := Eval(node.Right, env)
+		right := unwrapReferenceValue(Eval(node.Right, env))
 		if isError(right) {
 			return right
 		}
 		return evalPrefixExpression(node.Operator, right)
 	case *ast.InfixExpression:
-		left := Eval(node.Left, env)
+		left := unwrapReferenceValue(Eval(node.Left, env))
 		if isError(left) {
 			return left
 		}
 
-		right := Eval(node.Right, env)
+		right := unwrapReferenceValue(Eval(node.Right, env))
 		if isError(right) {
 			return right
 		}
 		return evalInfixExpression(node.Operator, left, right)
+
 	case *ast.IfExpression:
 		return evalIfExpression(node, env)
 	case *ast.AssignExpression:
 		return evalAssignExpression(node, env)
+	case *ast.CallExpression:
+		function := unwrapReferenceValue(Eval(node.Function, env))
+		if isError(function) {
+			return function
+		}
+		args := evalExpressions(node.Arguments, env, false)
+		if len(args) == 1 && isError(args[0]) {
+			if function == natives["fetch"] {
+				return applyFunction(function, args, env)
+			}
+			return args[0]
+		}
+
+		return applyFunction(function, args, env)
+	case *ast.IndexExpression:
+		ident := unwrapReferenceValue(Eval(node.Left, env))
+		if isError(ident) {
+			return ident
+		}
+		indexes := evalExpressions(node.Indexes, env, true)
+		if len(indexes) == 1 && isError(indexes[0]) {
+			return indexes[0]
+		}
+
+		return applyIndex(ident, indexes)
+
 	case *ast.ExpressionStatement:
 		return Eval(node.Expression, env)
 	case *ast.BlockStatement:
@@ -265,7 +314,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 		return &object.RetValue{Value: val}
 	case *ast.LetStatement:
-		val := Eval(node.Value, env)
+		val := unwrapReferenceValue(Eval(node.Value, env))
 		if isError(val) {
 			return val
 		}
@@ -274,6 +323,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		} else {
 			env.Set(node.Name.Value, val)
 		}
+	case *ast.RefStatement:
+		return evalRefStatement(node, env)
 	case *ast.DelStatement:
 		if ident, ok := node.DelIdent.(*ast.Identifier); ok {
 			if _, ok := env.Get(ident.Value); ok {
@@ -284,31 +335,35 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		} else {
 			return newError("left value not a identifier: " + node.DelIdent.String())
 		}
-	case *ast.FunctionLiteral:
-		params := node.Parameters
-		body := node.Body
-		return &object.Function{Parameters: params, Env: env, Body: body}
-	case *ast.CallExpression:
-		function := Eval(node.Function, env)
-		if isError(function) {
-			return function
-		}
-		args := evalExpressions(node.Arguments, env)
-		if len(args) == 1 && isError(args[0]) {
-			return args[0]
-		}
-
-		return applyFunction(function, args, env)
 	}
 
 	return VOID
+}
+
+func applyIndex(ident object.Object, indexes []object.Object) object.Object {
+	if arr, ok := ident.(*object.Array); ok {
+		if len(indexes) != 1 {
+			return newError("array: len(indexes) should be 1")
+		}
+		if indexes[0].Type() != object.INTEGER {
+			return newError("array: index should be Integer")
+		}
+		index := indexes[0].(*object.Integer).Value
+		length := int64(len(arr.Elements))
+		if index >= length || index < 0 {
+			return newError("array: out of range")
+		}
+		refObj := &arr.Elements[index]
+		return &object.Reference{Value: refObj}
+	}
+	return newError("not a array: %s", ident.Type())
 }
 
 func applyFunction(fn object.Object, args []object.Object, env *object.Environment) object.Object {
 	if function, ok := fn.(*object.Function); ok {
 		extendedEnv := extendFunctionEnv(function, args)
 		evaluated := Eval(function.Body, extendedEnv)
-		return unwrapReturnValue(evaluated)
+		return unwrapRetValue(evaluated)
 	}
 
 	if native, ok := fn.(*object.Native); ok {
@@ -335,9 +390,17 @@ func extendFunctionEnv(
 	return env
 }
 
-func unwrapReturnValue(obj object.Object) object.Object {
+func unwrapRetValue(obj object.Object) object.Object {
 	if retValue, ok := obj.(*object.RetValue); ok {
 		return retValue.Value
+	}
+
+	return obj
+}
+
+func unwrapReferenceValue(obj object.Object) object.Object {
+	if referenceVal, ok := obj.(*object.Reference); ok {
+		return *referenceVal.Value
 	}
 
 	return obj
@@ -346,11 +409,17 @@ func unwrapReturnValue(obj object.Object) object.Object {
 func evalExpressions(
 	exps []ast.Expression,
 	env *object.Environment,
+	unwrap bool,
 ) []object.Object {
 	var result []object.Object
 
 	for _, e := range exps {
-		evaluated := Eval(e, env)
+		var evaluated object.Object
+		if unwrap {
+			evaluated = unwrapReferenceValue(Eval(e, env))
+		} else {
+			evaluated = Eval(e, env)
+		}
 		if isError(evaluated) {
 			return []object.Object{evaluated}
 		}
@@ -409,6 +478,31 @@ func evalBlockStatement(block *ast.BlockStatement, env *object.Environment) obje
 	return result
 }
 
+func evalRefStatement(node *ast.RefStatement, env *object.Environment) object.Object {
+	val := unwrapReferenceValue(Eval(node.Value, env))
+	if isError(val) {
+		return val
+	}
+	if _, ok := env.Get(node.Name.Value); ok {
+		return newError("identifier %s already set", node.Name.Value)
+	} else {
+		left := Eval(node.Value, env)
+		if refer, ok := left.(*object.Reference); ok {
+			env.Set(node.Name.Value, refer)
+			return VOID
+		} else {
+			if ident, ok := node.Value.(*ast.Identifier); ok {
+				//TODO REFERENCE WON'T WORK WHEN TARGET IS A IDENTIFIER
+				if obj, ok := env.Get(ident.Value); ok {
+					env.Set(node.Name.Value, &object.Reference{Value: &obj})
+					return VOID
+				}
+			}
+		}
+		return newError("right value not a identifier or a reference: " + node.Value.String())
+	}
+}
+
 func evalPrefixExpression(operator string, right object.Object) object.Object {
 	switch operator {
 	case "!":
@@ -423,38 +517,60 @@ func evalPrefixExpression(operator string, right object.Object) object.Object {
 }
 
 func evalAssignExpression(node *ast.AssignExpression, env *object.Environment) object.Object {
-	val := Eval(node.Value, env)
+	val := unwrapReferenceValue(Eval(node.Value, env))
 	if isError(val) {
 		return val
 	}
-	if ident, ok := node.Left.(*ast.Identifier); ok {
-		if _, ok := env.Get(ident.Value); ok {
-			var newVal object.Object
-			switch node.Operator {
-			case "+=":
-				newVal = evalInfixExpression("+", evalIdentifier(ident, env), val)
-			case "-=":
-				newVal = evalInfixExpression("-", evalIdentifier(ident, env), val)
-			case "*=":
-				newVal = evalInfixExpression("*", evalIdentifier(ident, env), val)
-			case "/=":
-				newVal = evalInfixExpression("/", evalIdentifier(ident, env), val)
-			case "%=":
-				newVal = evalInfixExpression("%", evalIdentifier(ident, env), val)
-			case "=":
-				newVal = val
-			}
-			if isError(newVal) {
+
+	left := Eval(node.Left, env)
+	if refer, ok := left.(*object.Reference); ok {
+		var newVal object.Object
+		switch node.Operator {
+		case "+=":
+			newVal = evalInfixExpression("+", *refer.Value, val)
+		case "-=":
+			newVal = evalInfixExpression("-", *refer.Value, val)
+		case "*=":
+			newVal = evalInfixExpression("*", *refer.Value, val)
+		case "/=":
+			newVal = evalInfixExpression("/", *refer.Value, val)
+		case "%=":
+			newVal = evalInfixExpression("%", *refer.Value, val)
+		case "=":
+			newVal = val
+		}
+		if isError(newVal) {
+			return newVal
+		}
+		*refer.Value = newVal
+		return newVal
+	} else {
+		if ident, ok := node.Left.(*ast.Identifier); ok {
+			if _, ok := env.Get(ident.Value); ok {
+				var newVal object.Object
+				switch node.Operator {
+				case "+=":
+					newVal = evalInfixExpression("+", evalIdentifier(ident, env), val)
+				case "-=":
+					newVal = evalInfixExpression("-", evalIdentifier(ident, env), val)
+				case "*=":
+					newVal = evalInfixExpression("*", evalIdentifier(ident, env), val)
+				case "/=":
+					newVal = evalInfixExpression("/", evalIdentifier(ident, env), val)
+				case "%=":
+					newVal = evalInfixExpression("%", evalIdentifier(ident, env), val)
+				case "=":
+					newVal = val
+				}
+				if isError(newVal) {
+					return newVal
+				}
+				env.Set(ident.Value, newVal)
 				return newVal
 			}
-			env.Set(ident.Value, newVal)
-			return newVal
-		} else {
-			return newError("identifier not found: " + ident.Value)
 		}
-	} else {
-		return newError("left value not a identifier: " + node.Left.String())
 	}
+	return newError("left value not a identifier or a reference: " + node.Left.String())
 }
 
 func evalInfixExpression(
@@ -462,8 +578,8 @@ func evalInfixExpression(
 	left, right object.Object,
 ) object.Object {
 	switch {
-	case left.IsNumber():
-		if right.IsNumber() {
+	case left.Type() == object.INTEGER || left.Type() == object.FLOAT:
+		if right.Type() == object.INTEGER || right.Type() == object.FLOAT {
 			return evalNumberInfixExpression(operator, left, right)
 		}
 		return newError("type mismatch: %s %s %s",
@@ -709,7 +825,7 @@ func evalPlusPrefixOperatorExpression(right object.Object) object.Object {
 }
 
 func evalIfExpression(ie *ast.IfExpression, env *object.Environment) object.Object {
-	condition := Eval(ie.Condition, env)
+	condition := unwrapReferenceValue(Eval(ie.Condition, env))
 	if isError(condition) {
 		return condition
 	}

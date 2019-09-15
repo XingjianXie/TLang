@@ -1,11 +1,11 @@
 package main
 
 import (
-	"TProject/evaluator"
-	"TProject/lexer"
-	"TProject/object"
-	"TProject/parser"
-	"TProject/repl"
+	"TLang/evaluator"
+	"TLang/lexer"
+	"TLang/object"
+	"TLang/parser"
+	"TLang/repl"
 	"fmt"
 	"io"
 	"io/ioutil"

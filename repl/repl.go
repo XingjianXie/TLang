@@ -1,10 +1,10 @@
 package repl
 
 import (
-	"TProject/evaluator"
-	"TProject/lexer"
-	"TProject/object"
-	"TProject/parser"
+	"TLang/evaluator"
+	"TLang/lexer"
+	"TLang/object"
+	"TLang/parser"
 	"bufio"
 	"fmt"
 	"io"

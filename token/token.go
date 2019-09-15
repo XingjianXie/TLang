@@ -13,8 +13,12 @@ var keywords = map[string]Type{
 	"ref":   REF,
 	"true":  TRUE,
 	"false": FALSE,
+	"void":  VOID,
 	"if":    IF,
 	"else":  ELSE,
+	"loop":  LOOP,
+	"out":   OUT,
+	"jump":  JUMP,
 	"ret":   RET,
 	"del":   DEL,
 	"and":   AND,
@@ -80,21 +84,15 @@ const (
 	REF       = "REF"
 	TRUE      = "TRUE"
 	FALSE     = "FALSE"
+	VOID      = "VOID"
 	IF        = "IF"
 	ELSE      = "ELSE"
+	LOOP      = "LOOP"
+	OUT       = "OUT"
+	JUMP      = "JUMP"
 	RET       = "RET"
 	UNDERLINE = "UNDERLINE"
 	AND       = "AND"
 	OR        = "OR"
 	DEL       = "DEL"
-
-	// Invisible
-	INVISIBLE = ""
 )
-
-func MakeInvisible() Token {
-	return Token{
-		Type:    INVISIBLE,
-		Literal: "",
-	}
-}

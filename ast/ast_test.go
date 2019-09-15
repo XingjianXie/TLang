@@ -1,7 +1,7 @@
 package ast
 
 import (
-	"TProject/token"
+	"TLang/token"
 	"testing"
 )
 

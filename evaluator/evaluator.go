@@ -1,10 +1,10 @@
 package evaluator
 
 import (
-	"TProject/ast"
-	"TProject/lexer"
-	"TProject/object"
-	"TProject/parser"
+	"TLang/ast"
+	"TLang/lexer"
+	"TLang/object"
+	"TLang/parser"
 	"fmt"
 	"io"
 	"math"
@@ -216,10 +216,11 @@ func newError(format string, a ...interface{}) *object.Err {
 }
 
 func isError(obj object.Object) bool {
-	if obj != VOID {
-		return obj.Type() == object.ERR
-	}
-	return false
+	return obj.Type() == object.ERR
+}
+
+func isSkip(obj object.Object) bool {
+	return obj.Type() == object.RET || obj.Type() == object.OUT || obj.Type() == object.JUMP
 }
 
 func nativeBoolToBooleanObject(input bool) *object.Boolean {
@@ -275,6 +276,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 
 	case *ast.IfExpression:
 		return evalIfExpression(node, env)
+	case *ast.LoopExpression:
+		return evalLoopExpression(node, env)
 	case *ast.AssignExpression:
 		return evalAssignExpression(node, env)
 	case *ast.CallExpression:
@@ -467,11 +470,8 @@ func evalBlockStatement(block *ast.BlockStatement, env *object.Environment) obje
 	for _, statement := range block.Statements {
 		result = Eval(statement, env)
 
-		if result != VOID {
-			rt := result.Type()
-			if rt == object.RET || rt == object.ERR {
-				return result
-			}
+		if isError(result) || isSkip(result) {
+			return result
 		}
 	}
 
@@ -501,7 +501,7 @@ func evalRefStatement(node *ast.RefStatement, env *object.Environment) object.Ob
 				//return newError("not support yet, refer to identifier: " + ident.Value)
 			}
 		}
-		return newError("right value not a identifier or a reference: " + node.Value.String())
+		return newError("left value not a identifier or a reference: " + node.Value.String())
 	}
 }
 
@@ -839,6 +839,28 @@ func evalIfExpression(ie *ast.IfExpression, env *object.Environment) object.Obje
 	} else {
 		return VOID
 	}
+}
+
+func evalLoopExpression(le *ast.LoopExpression, env *object.Environment) object.Object {
+	var result object.Object = VOID
+
+	condition := unwrapReferenceValue(Eval(le.Condition, env))
+	if isError(condition) {
+		return condition
+	}
+
+	for isTruthy(condition) {
+		result = Eval(le.Body, env)
+		if isError(result) || result.Type() == object.RET {
+			return result
+		}
+
+		condition = unwrapReferenceValue(Eval(le.Condition, env))
+		if isError(condition) {
+			return condition
+		}
+	}
+	return result
 }
 
 func isTruthy(obj object.Object) bool {

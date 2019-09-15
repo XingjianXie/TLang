@@ -1,7 +1,7 @@
 package object
 
 import (
-	"TProject/ast"
+	"TLang/ast"
 	"bytes"
 	"fmt"
 	"strings"
@@ -16,6 +16,8 @@ const (
 	STRING    = "STRING"
 	VOID      = "VOID"
 	RET       = "RET"
+	OUT       = "OUT"
+	JUMP      = "JUMP"
 	ERR       = "ERR"
 	FUNCTION  = "FUNCTION"
 	NATIVE    = "NATIVE"
@@ -66,6 +68,20 @@ type RetValue struct {
 func (rv *RetValue) Inspect() string { return rv.Value.Inspect() }
 func (rv *RetValue) Type() Type      { return RET }
 func (rv *RetValue) Copy() Object    { return &RetValue{Value: rv.Copy()} }
+
+type OutValue struct {
+	Value Object
+}
+
+func (ov *OutValue) Inspect() string { return ov.Value.Inspect() }
+func (ov *OutValue) Type() Type      { return OUT }
+func (ov *OutValue) Copy() Object    { return &OutValue{Value: ov.Copy()} }
+
+type Jump struct{}
+
+func (j *Jump) Inspect() string { return "jump" }
+func (j *Jump) Type() Type      { return JUMP }
+func (j *Jump) Copy() Object    { return j }
 
 type Err struct {
 	Message string

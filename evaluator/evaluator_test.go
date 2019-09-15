@@ -1,9 +1,9 @@
 package evaluator
 
 import (
-	"TProject/lexer"
-	"TProject/object"
-	"TProject/parser"
+	"TLang/lexer"
+	"TLang/object"
+	"TLang/parser"
 	"testing"
 )
 
@@ -484,6 +484,18 @@ func TestArrayIndexExpressions(t *testing.T) {
 		{
 			"[1, 2, 3][-1];",
 			"array: out of range",
+		},
+		{
+			"let a = [1, 2]; del a; a;",
+			"identifier not found: a",
+		},
+		{
+			"let a = [1, 2]; del a[0];",
+			"left value not a identifier: (a[0])",
+		},
+		{
+			"let a = [1, 2]; a[0] = 2; a[0];",
+			2,
 		},
 	}
 

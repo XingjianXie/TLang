@@ -1,7 +1,7 @@
 package lexer
 
 import (
-	"TProject/token"
+	"TLang/token"
 )
 
 type Lexer struct {

@@ -1,9 +1,9 @@
 package parser
 
 import (
-	"TProject/ast"
-	"TProject/lexer"
-	"TProject/token"
+	"TLang/ast"
+	"TLang/lexer"
+	"TLang/token"
 	"fmt"
 	"strconv"
 )
@@ -146,9 +146,11 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.STRING, p.parseStringLiteral)
 	p.registerPrefix(token.TRUE, p.parseBooleanLiteral)
 	p.registerPrefix(token.FALSE, p.parseBooleanLiteral)
+	p.registerPrefix(token.VOID, p.parseVoidLiteral)
 	p.registerPrefix(token.LPAREN, p.parseGroupedExpression)
 	p.registerPrefix(token.LBRACKET, p.parseArrayLiteral)
 	p.registerPrefix(token.IF, p.parseIfExpression)
+	p.registerPrefix(token.LOOP, p.parseLoopExpression)
 	p.registerPrefix(token.FUNCTION, p.parseFunctionLiteral)
 
 	p.infixParseFns = make(map[token.Type]infixParseFn)
@@ -207,6 +209,10 @@ func (p *Parser) parseStatement() ast.Statement {
 		return p.parseRefStatement()
 	case token.RET:
 		return p.parseRetStatement()
+	case token.OUT:
+		return p.parseOutStatement()
+	case token.JUMP:
+		return p.parseJumpStatement()
 	case token.DEL:
 		return p.parseDelStatement()
 	default:
@@ -277,9 +283,45 @@ func (p *Parser) parseAssignExpression(left ast.Expression) ast.Expression {
 func (p *Parser) parseRetStatement() *ast.RetStatement {
 	stmt := &ast.RetStatement{Token: p.curToken}
 
+	if p.peekTokenIs(token.SEMICOLON) {
+		p.nextToken()
+		stmt.RetValue = p.parseVoidLiteral()
+		return stmt
+	}
+
 	p.nextToken()
 
 	stmt.RetValue = p.parseExpression(LOWEST)
+
+	if !p.expectPeek(token.SEMICOLON) {
+		return nil
+	}
+
+	return stmt
+}
+
+func (p *Parser) parseOutStatement() *ast.OutStatement {
+	stmt := &ast.OutStatement{Token: p.curToken}
+
+	if p.peekTokenIs(token.SEMICOLON) {
+		p.nextToken()
+		stmt.OutValue = p.parseVoidLiteral()
+		return stmt
+	}
+
+	p.nextToken()
+
+	stmt.OutValue = p.parseExpression(LOWEST)
+
+	if !p.expectPeek(token.SEMICOLON) {
+		return nil
+	}
+
+	return stmt
+}
+
+func (p *Parser) parseJumpStatement() *ast.JumpStatement {
+	stmt := &ast.JumpStatement{Token: p.curToken}
 
 	if !p.expectPeek(token.SEMICOLON) {
 		return nil
@@ -360,6 +402,10 @@ func (p *Parser) parseBooleanLiteral() ast.Expression {
 	return &ast.BooleanLiteral{Token: p.curToken, Value: p.curTokenIs(token.TRUE)}
 }
 
+func (p *Parser) parseVoidLiteral() ast.Expression {
+	return &ast.VoidLiteral{Token: p.curToken}
+}
+
 func (p *Parser) parseStringLiteral() ast.Expression {
 	return &ast.StringLiteral{Token: p.curToken, Value: p.curToken.Literal}
 }
@@ -438,7 +484,10 @@ func (p *Parser) parseIfExpression() ast.Expression {
 			}
 			cur := p.curToken
 			expression.Alternative = &ast.BlockStatement{
-				Token: token.MakeInvisible(),
+				Token: token.Token{
+					Type:    token.LBRACE,
+					Literal: "",
+				},
 				Statements: []ast.Statement{
 					&ast.ExpressionStatement{
 						Token:      cur,
@@ -452,6 +501,29 @@ func (p *Parser) parseIfExpression() ast.Expression {
 		p.nextToken()
 		expression.Alternative = p.parseBlockStatement()
 	}
+
+	return expression
+}
+
+func (p *Parser) parseLoopExpression() ast.Expression {
+	expression := &ast.LoopExpression{Token: p.curToken}
+
+	if !p.expectPeek(token.LPAREN) {
+		return nil
+	}
+
+	p.nextToken()
+	expression.Condition = p.parseExpression(LOWEST)
+
+	if !p.expectPeek(token.RPAREN) {
+		return nil
+	}
+
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
+
+	expression.Body = p.parseBlockStatement()
 
 	return expression
 }

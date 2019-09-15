@@ -1,7 +1,7 @@
 package ast
 
 import (
-	"TProject/token"
+	"TLang/token"
 	"bytes"
 	"strings"
 )
@@ -120,12 +120,48 @@ func (rs *RetStatement) TokenLiteral() string { return rs.Token.Literal }
 func (rs *RetStatement) String() string {
 	var out bytes.Buffer
 
-	out.WriteString(rs.TokenLiteral() + " ")
+	out.WriteString(rs.TokenLiteral())
 
 	if rs.RetValue != nil {
-		out.WriteString(rs.RetValue.String())
+		out.WriteString(" " + rs.RetValue.String())
 	}
 
+	out.WriteString(";")
+
+	return out.String()
+}
+
+type OutStatement struct {
+	Token    token.Token // the 'out' token
+	OutValue Expression
+}
+
+func (o *OutStatement) statementNode()       {}
+func (o *OutStatement) TokenLiteral() string { return o.Token.Literal }
+func (o *OutStatement) String() string {
+	var out bytes.Buffer
+
+	out.WriteString(o.TokenLiteral())
+
+	if o.OutValue != nil {
+		out.WriteString(" " + o.OutValue.String())
+	}
+
+	out.WriteString(";")
+
+	return out.String()
+}
+
+type JumpStatement struct {
+	Token token.Token // the 'jump' token
+}
+
+func (js *JumpStatement) statementNode()       {}
+func (js *JumpStatement) TokenLiteral() string { return js.Token.Literal }
+func (js *JumpStatement) String() string {
+	var out bytes.Buffer
+
+	out.WriteString(js.TokenLiteral())
 	out.WriteString(";")
 
 	return out.String()
@@ -238,6 +274,14 @@ func (b *BooleanLiteral) expressionNode()      {}
 func (b *BooleanLiteral) TokenLiteral() string { return b.Token.Literal }
 func (b *BooleanLiteral) String() string       { return b.Token.Literal }
 
+type VoidLiteral struct {
+	Token token.Token
+}
+
+func (v *VoidLiteral) expressionNode()      {}
+func (v *VoidLiteral) TokenLiteral() string { return v.Token.Literal }
+func (v *VoidLiteral) String() string       { return v.Token.Literal }
+
 type IfExpression struct {
 	Token       token.Token // The 'if' token
 	Condition   Expression
@@ -261,6 +305,26 @@ func (ie *IfExpression) String() string {
 		out.WriteString(ie.Alternative.String())
 		out.WriteString(" ")
 	}
+
+	return out.String()
+}
+
+type LoopExpression struct {
+	Token     token.Token // The 'loop' token
+	Condition Expression
+	Body      *BlockStatement
+}
+
+func (le *LoopExpression) expressionNode()      {}
+func (le *LoopExpression) TokenLiteral() string { return le.Token.Literal }
+func (le *LoopExpression) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("if ")
+	out.WriteString(le.Condition.String())
+	out.WriteString(" ")
+	out.WriteString(le.Body.String())
+	out.WriteString(" ")
 
 	return out.String()
 }

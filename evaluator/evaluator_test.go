@@ -388,6 +388,20 @@ func TestStringLiteral(t *testing.T) {
 	}
 }
 
+func TestCharacterLiteral(t *testing.T) {
+	input := `'1';`
+
+	evaluated := testEval(input)
+	str, ok := evaluated.(*object.Character)
+	if !ok {
+		t.Fatalf("object is not Character. got=%T (%+v)", evaluated, evaluated)
+	}
+
+	if str.Value != '1' {
+		t.Errorf("Character has wrong value. got=%q", string(str.Value))
+	}
+}
+
 func TestStringConcatenation(t *testing.T) {
 	input := `"Hello" + " " + "World!";`
 

@@ -157,6 +157,9 @@ func (l *Lexer) NextToken() token.Token {
 	case '"':
 		tok.Type = token.STRING
 		tok.Literal = l.readString()
+	case '\'':
+		tok.Type = token.CHARACTER
+		tok.Literal = l.readCharacter()
 	case 0:
 		tok.Literal = ""
 		tok.Type = token.EOF
@@ -197,6 +200,17 @@ func (l *Lexer) readString() string {
 	for {
 		l.readChar()
 		if l.ch == '"' || l.ch == 0 {
+			break
+		}
+	}
+	return l.input[position:l.position]
+}
+
+func (l *Lexer) readCharacter() string {
+	position := l.position + 1
+	for {
+		l.readChar()
+		if l.ch == '\'' || l.ch == 0 {
 			break
 		}
 	}

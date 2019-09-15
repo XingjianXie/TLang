@@ -21,6 +21,9 @@ func TestNextToken(t *testing.T) {
 "Hello World"
 "123"
 ""
+'x'
+void
+true
 [][]
 `
 
@@ -74,6 +77,10 @@ func TestNextToken(t *testing.T) {
 		{token.STRING, "Hello World"},
 		{token.STRING, "123"},
 		{token.STRING, ""},
+
+		{token.CHARACTER, "x"},
+		{token.VOID, "void"},
+		{token.TRUE, "true"},
 
 		{token.LBRACKET, "["},
 		{token.RBRACKET, "]"},

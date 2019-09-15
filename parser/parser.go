@@ -144,6 +144,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.IDENT, p.parseIdentifier)
 	p.registerPrefix(token.NUMBER, p.parseNumberLiteral)
 	p.registerPrefix(token.STRING, p.parseStringLiteral)
+	p.registerPrefix(token.CHARACTER, p.parseCharacterLiteral)
 	p.registerPrefix(token.TRUE, p.parseBooleanLiteral)
 	p.registerPrefix(token.FALSE, p.parseBooleanLiteral)
 	p.registerPrefix(token.VOID, p.parseVoidLiteral)
@@ -408,6 +409,15 @@ func (p *Parser) parseVoidLiteral() ast.Expression {
 
 func (p *Parser) parseStringLiteral() ast.Expression {
 	return &ast.StringLiteral{Token: p.curToken, Value: p.curToken.Literal}
+}
+
+func (p *Parser) parseCharacterLiteral() ast.Expression {
+	val := []rune(p.curToken.Literal)
+	if len(val) != 1 {
+		msg := fmt.Sprintf("expected character, got string")
+		p.errors = append(p.errors, msg)
+	}
+	return &ast.CharacterLiteral{Token: p.curToken, Value: val[0]}
 }
 
 func (p *Parser) parseArrayLiteral() ast.Expression {

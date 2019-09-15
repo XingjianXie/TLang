@@ -33,7 +33,7 @@ func init() {
 		}
 		switch arg := unwrapReferenceValue(args[0]).(type) {
 		case *object.String:
-			return &object.Integer{Value: int64(len(arg.Value))}
+			return &object.Integer{Value: int64(len([]rune(arg.Value)))}
 		case *object.Array:
 			return &object.Integer{Value: int64(len(arg.Elements))}
 		default:
@@ -78,10 +78,14 @@ func init() {
 		if len(args) != 1 {
 			return newError("native function string: len(args) should be 1")
 		}
-		if str, ok := unwrapReferenceValue(args[0]).(*object.String); ok {
+		un := unwrapReferenceValue(args[0])
+		if str, ok := un.(*object.String); ok {
 			return str
 		}
-		return &object.String{Value: args[0].Inspect()}
+		if ch, ok := un.(*object.Character); ok {
+			return &object.String{Value: string(ch.Value)}
+		}
+		return &object.String{Value: un.Inspect()}
 	}
 	EXIT = func(env *object.Environment, args []object.Object) object.Object {
 		if len(args) != 1 && len(args) != 0 {
@@ -128,6 +132,12 @@ func init() {
 				return newError("could not parse %s as integer", arg.Value)
 			}
 			return &object.Integer{Value: val}
+		case *object.Character:
+			val, err := strconv.ParseInt(string(arg.Value), 10, 64)
+			if err != nil {
+				return newError("could not parse %s as integer", string(arg.Value))
+			}
+			return &object.Integer{Value: val}
 		case *object.Boolean:
 			if arg.Value {
 				return &object.Integer{Value: 1}
@@ -154,6 +164,12 @@ func init() {
 			val, err := strconv.ParseFloat(arg.Value, 64)
 			if err != nil {
 				return newError("could not parse %s as float", arg.Value)
+			}
+			return &object.Float{Value: val}
+		case *object.Character:
+			val, err := strconv.ParseFloat(string(arg.Value), 64)
+			if err != nil {
+				return newError("could not parse %s as float", string(arg.Value))
 			}
 			return &object.Float{Value: val}
 		case *object.Boolean:
@@ -204,7 +220,7 @@ func init() {
 		if len(args) != 1 {
 			return newError("native function first: len(args) should be 1")
 		}
-		if array, ok := args[0].(*object.Array); ok {
+		if array, ok := unwrapReferenceValue(args[0]).(*object.Array); ok {
 			if len(array.Elements) == 0 {
 				return VOID
 			}
@@ -217,7 +233,7 @@ func init() {
 		if len(args) != 1 {
 			return newError("native function fetch: len(args) should be 1")
 		}
-		if array, ok := args[0].(*object.Array); ok {
+		if array, ok := unwrapReferenceValue(args[0]).(*object.Array); ok {
 			if len(array.Elements) == 0 {
 				return VOID
 			}
@@ -295,6 +311,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return &object.Float{Value: node.Value}
 	case *ast.StringLiteral:
 		return &object.String{Value: node.Value}
+	case *ast.CharacterLiteral:
+		return &object.Character{Value: node.Value}
 	case *ast.BooleanLiteral:
 		return nativeBoolToBooleanObject(node.Value)
 	case *ast.Identifier:
@@ -420,6 +438,21 @@ func applyIndex(ident object.Object, indexes []object.Object) object.Object {
 		}
 		refObj := &arr.Elements[index]
 		return &object.Reference{Value: refObj}
+	}
+	if str, ok := ident.(*object.String); ok {
+		runeStr := []rune(str.Value)
+		if len(indexes) != 1 {
+			return newError("string: len(indexes) should be 1")
+		}
+		if indexes[0].Type() != object.INTEGER {
+			return newError("string: index should be Integer")
+		}
+		index := indexes[0].(*object.Integer).Value
+		length := int64(len(runeStr))
+		if index >= length || index < 0 {
+			return newError("string: out of range")
+		}
+		return &object.Character{Value: runeStr[index]}
 	}
 	return newError("not a array: %s", ident.Type())
 }
@@ -671,6 +704,13 @@ func evalInfixExpression(
 		return newError("type mismatch: %s %s %s",
 			left.Type(), operator, right.Type())
 
+	case left.Type() == object.CHARACTER:
+		if right.Type() == object.CHARACTER {
+			return evalCharacterInfixExpression(operator, left.(*object.Character), right.(*object.Character))
+		}
+		return newError("type mismatch: %s %s %s",
+			left.Type(), operator, right.Type())
+
 	default:
 		return newError("unknown operator: %s %s %s",
 			left.Type(), operator, right.Type())
@@ -707,6 +747,23 @@ func evalStringInfixExpression(
 		return nativeBoolToBooleanObject(left.Value != right.Value)
 	case "+":
 		return &object.String{Value: left.Value + right.Value}
+	default:
+		return newError("unknown operator: %s %s %s",
+			left.Type(), operator, right.Type())
+	}
+}
+
+func evalCharacterInfixExpression(
+	operator string,
+	left, right *object.Character,
+) object.Object {
+	switch operator {
+	case "==":
+		return nativeBoolToBooleanObject(left.Value == right.Value)
+	case "!=":
+		return nativeBoolToBooleanObject(left.Value != right.Value)
+	case "+":
+		return &object.String{Value: string(left.Value) + string(right.Value)}
 	default:
 		return newError("unknown operator: %s %s %s",
 			left.Type(), operator, right.Type())

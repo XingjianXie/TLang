@@ -14,6 +14,7 @@ const (
 	FLOAT     = "FLOAT"
 	BOOLEAN   = "BOOLEAN"
 	STRING    = "STRING"
+	CHARACTER = "CHARACTER"
 	VOID      = "VOID"
 	RET       = "RET"
 	OUT       = "OUT"
@@ -123,6 +124,14 @@ type String struct {
 func (s *String) Inspect() string { return "\"" + s.Value + "\"" }
 func (s *String) Type() Type      { return STRING }
 func (s *String) Copy() Object    { return s }
+
+type Character struct {
+	Value rune
+}
+
+func (c *Character) Inspect() string { return "'" + string(c.Value) + "'" }
+func (c *Character) Type() Type      { return CHARACTER }
+func (c *Character) Copy() Object    { return c }
 
 type Native struct {
 	Fn func(env *Environment, args []Object) Object

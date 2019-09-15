@@ -432,6 +432,15 @@ func (sl *StringLiteral) expressionNode()      {}
 func (sl *StringLiteral) TokenLiteral() string { return sl.Token.Literal }
 func (sl *StringLiteral) String() string       { return "\"" + sl.Token.Literal + "\"" }
 
+type CharacterLiteral struct {
+	Token token.Token
+	Value rune
+}
+
+func (cl *CharacterLiteral) expressionNode()      {}
+func (cl *CharacterLiteral) TokenLiteral() string { return cl.Token.Literal }
+func (cl *CharacterLiteral) String() string       { return "'" + cl.Token.Literal + "'" }
+
 type ArrayLiteral struct {
 	Token    token.Token // the '[' token
 	Elements []Expression

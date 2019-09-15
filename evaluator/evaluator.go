@@ -321,7 +321,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		if _, ok := env.Get(node.Name.Value); ok {
 			return newError("identifier %s already set", node.Name.Value)
 		} else {
-			env.Set(node.Name.Value, val)
+			env.Set(node.Name.Value, val.Copy())
 		}
 	case *ast.RefStatement:
 		return evalRefStatement(node, env)
@@ -492,11 +492,13 @@ func evalRefStatement(node *ast.RefStatement, env *object.Environment) object.Ob
 			return VOID
 		} else {
 			if ident, ok := node.Value.(*ast.Identifier); ok {
-				//TODO REFERENCE WON'T WORK WHEN TARGET IS A IDENTIFIER
+				//DONE REFERENCE WON'T WORK WHEN TARGET IS A IDENTIFIER
+
 				if obj, ok := env.Get(ident.Value); ok {
-					env.Set(node.Name.Value, &object.Reference{Value: &obj})
+					env.Set(node.Name.Value, obj)
 					return VOID
 				}
+				//return newError("not support yet, refer to identifier: " + ident.Value)
 			}
 		}
 		return newError("right value not a identifier or a reference: " + node.Value.String())
@@ -537,7 +539,7 @@ func evalAssignExpression(node *ast.AssignExpression, env *object.Environment) o
 		case "%=":
 			newVal = evalInfixExpression("%", *refer.Value, val)
 		case "=":
-			newVal = val
+			newVal = val.Copy()
 		}
 		if isError(newVal) {
 			return newVal

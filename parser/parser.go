@@ -416,6 +416,7 @@ func (p *Parser) parseCharacterLiteral() ast.Expression {
 	if len(val) != 1 {
 		msg := fmt.Sprintf("expected character, got string")
 		p.errors = append(p.errors, msg)
+		return nil
 	}
 	return &ast.CharacterLiteral{Token: p.curToken, Value: val[0]}
 }

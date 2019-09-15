@@ -211,7 +211,7 @@ func init() {
 			return newError("native function append: len(args) should be 1")
 		}
 		if array, ok := unwrapReferenceValue(args[0]).(*object.Array); ok {
-			return &object.Array{Elements: append(array.Elements, unwrapReferenceValue(args[0]))}
+			return &object.Array{Elements: append(array.Elements, unwrapReferenceValue(args[1]))}
 		}
 		return newError("native function append: args[0] should be Array")
 	}
@@ -697,16 +697,9 @@ func evalInfixExpression(
 		return newError("type mismatch: %s %s %s",
 			left.Type(), operator, right.Type())
 
-	case left.Type() == object.STRING:
-		if right.Type() == object.STRING {
-			return evalStringInfixExpression(operator, left.(*object.String), right.(*object.String))
-		}
-		return newError("type mismatch: %s %s %s",
-			left.Type(), operator, right.Type())
-
-	case left.Type() == object.CHARACTER:
-		if right.Type() == object.CHARACTER {
-			return evalCharacterInfixExpression(operator, left.(*object.Character), right.(*object.Character))
+	case left.Type() == object.STRING || left.Type() == object.CHARACTER:
+		if right.Type() == object.STRING || right.Type() == object.CHARACTER {
+			return evalStringInfixExpression(operator, left.(object.Letter).LetterObj(), right.(object.Letter).LetterObj())
 		}
 		return newError("type mismatch: %s %s %s",
 			left.Type(), operator, right.Type())
@@ -738,35 +731,18 @@ func evalBooleanInfixExpression(
 
 func evalStringInfixExpression(
 	operator string,
-	left, right *object.String,
+	left, right string,
 ) object.Object {
 	switch operator {
 	case "==":
-		return nativeBoolToBooleanObject(left.Value == right.Value)
+		return nativeBoolToBooleanObject(left == right)
 	case "!=":
-		return nativeBoolToBooleanObject(left.Value != right.Value)
+		return nativeBoolToBooleanObject(left != right)
 	case "+":
-		return &object.String{Value: left.Value + right.Value}
+		return &object.String{Value: left + right}
 	default:
 		return newError("unknown operator: %s %s %s",
-			left.Type(), operator, right.Type())
-	}
-}
-
-func evalCharacterInfixExpression(
-	operator string,
-	left, right *object.Character,
-) object.Object {
-	switch operator {
-	case "==":
-		return nativeBoolToBooleanObject(left.Value == right.Value)
-	case "!=":
-		return nativeBoolToBooleanObject(left.Value != right.Value)
-	case "+":
-		return &object.String{Value: string(left.Value) + string(right.Value)}
-	default:
-		return newError("unknown operator: %s %s %s",
-			left.Type(), operator, right.Type())
+			object.STRING, operator, object.STRING)
 	}
 }
 

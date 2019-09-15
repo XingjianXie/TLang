@@ -32,6 +32,14 @@ type Object interface {
 	Copy() Object
 }
 
+type Number interface {
+	NumberObj()
+}
+
+type Letter interface {
+	LetterObj() string
+}
+
 type Integer struct {
 	Value int64
 }
@@ -39,6 +47,7 @@ type Integer struct {
 func (i *Integer) Inspect() string { return fmt.Sprintf("%d", i.Value) }
 func (i *Integer) Type() Type      { return INTEGER }
 func (i *Integer) Copy() Object    { return i }
+func (i *Integer) NumberObj()      {}
 
 type Float struct {
 	Value float64
@@ -47,6 +56,7 @@ type Float struct {
 func (f *Float) Inspect() string { return fmt.Sprintf("%f", f.Value) }
 func (f *Float) Type() Type      { return FLOAT }
 func (f *Float) Copy() Object    { return f }
+func (f *Float) NumberObj()      {}
 
 type Boolean struct {
 	Value bool
@@ -121,17 +131,19 @@ type String struct {
 	Value string
 }
 
-func (s *String) Inspect() string { return "\"" + s.Value + "\"" }
-func (s *String) Type() Type      { return STRING }
-func (s *String) Copy() Object    { return s }
+func (s *String) Inspect() string   { return "\"" + s.Value + "\"" }
+func (s *String) Type() Type        { return STRING }
+func (s *String) Copy() Object      { return s }
+func (s *String) LetterObj() string { return s.Value }
 
 type Character struct {
 	Value rune
 }
 
-func (c *Character) Inspect() string { return "'" + string(c.Value) + "'" }
-func (c *Character) Type() Type      { return CHARACTER }
-func (c *Character) Copy() Object    { return c }
+func (c *Character) Inspect() string   { return "'" + string(c.Value) + "'" }
+func (c *Character) Type() Type        { return CHARACTER }
+func (c *Character) Copy() Object      { return c }
+func (c *Character) LetterObj() string { return string(c.Value) }
 
 type Native struct {
 	Fn func(env *Environment, args []Object) Object

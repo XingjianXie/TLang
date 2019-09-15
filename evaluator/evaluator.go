@@ -16,6 +16,7 @@ var (
 	TRUE  = &object.Boolean{Value: true}
 	FALSE = &object.Boolean{Value: false}
 	VOID  = &object.Void{}
+	JUMP  = &object.Jump{}
 )
 
 const T_LANG = `                                                         
@@ -316,6 +317,14 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			return val
 		}
 		return &object.RetValue{Value: val}
+	case *ast.OutStatement:
+		val := Eval(node.OutValue, env)
+		if isError(val) {
+			return val
+		}
+		return &object.OutValue{Value: val}
+	case *ast.JumpStatement:
+		return JUMP
 	case *ast.LetStatement:
 		val := unwrapReferenceValue(Eval(node.Value, env))
 		if isError(val) {
@@ -395,6 +404,14 @@ func extendFunctionEnv(
 
 func unwrapRetValue(obj object.Object) object.Object {
 	if retValue, ok := obj.(*object.RetValue); ok {
+		return retValue.Value
+	}
+
+	return obj
+}
+
+func unwrapOutValue(obj object.Object) object.Object {
+	if retValue, ok := obj.(*object.OutValue); ok {
 		return retValue.Value
 	}
 
@@ -850,9 +867,17 @@ func evalLoopExpression(le *ast.LoopExpression, env *object.Environment) object.
 	}
 
 	for isTruthy(condition) {
-		result = Eval(le.Body, env)
-		if isError(result) || result.Type() == object.RET {
-			return result
+		newResult := Eval(le.Body, env)
+		if isError(newResult) || newResult.Type() == object.RET {
+			return newResult
+		}
+
+		if newResult.Type() == object.OUT {
+			return unwrapOutValue(newResult)
+		}
+
+		if newResult.Type() != object.JUMP {
+			result = newResult
 		}
 
 		condition = unwrapReferenceValue(Eval(le.Condition, env))

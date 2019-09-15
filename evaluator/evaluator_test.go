@@ -509,3 +509,20 @@ func TestArrayIndexExpressions(t *testing.T) {
 		}
 	}
 }
+
+func TestArrayFunctions(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected int64
+	}{
+		{"len([1,2,3]);", 3},
+		{"len([]);", 0},
+		{"len(append([1,2,3], 4));", 4},
+		{"last([1,2]);", 2},
+		{"first([1,2]);", 1},
+	}
+
+	for _, tt := range tests {
+		testIntegerObject(t, testEval(tt.input), tt.expected)
+	}
+}

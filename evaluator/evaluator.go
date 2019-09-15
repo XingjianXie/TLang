@@ -63,8 +63,10 @@ func init() {
 		switch arg := unwrapReferenceValue(args[0]).(type) {
 		case *object.String:
 			return &object.Integer{Value: int64(len(arg.Value))}
+		case *object.Array:
+			return &object.Integer{Value: int64(len(arg.Elements))}
 		default:
-			return newError("native function len: args[0] should be String")
+			return newError("native function len: arg should be String or Array")
 		}
 	}
 	PRINT = func(env *object.Environment, args []object.Object) object.Object {
@@ -91,7 +93,7 @@ func init() {
 			if val, ok := unwrapReferenceValue(args[0]).(*object.Integer); ok {
 				os.Exit(int(val.Value))
 			}
-			return newError("native function len: args[0] should be Integer")
+			return newError("native function len: arg should be Integer")
 		}
 		os.Exit(0)
 		return VOID
@@ -114,13 +116,13 @@ func init() {
 			return Eval(program, env)
 		}
 
-		return newError("native function eval: args[0] should be String")
+		return newError("native function eval: args should be String")
 	}
 	INT = func(env *object.Environment, args []object.Object) object.Object {
 		if len(args) != 1 {
 			return newError("native function int: len(args) should be 1")
 		}
-		switch arg := args[0].(type) {
+		switch arg := unwrapReferenceValue(args[0]).(type) {
 		case *object.String:
 			val, err := strconv.ParseInt(arg.Value, 10, 64)
 			if err != nil {
@@ -137,8 +139,10 @@ func init() {
 			return &object.Integer{Value: int64(arg.Value)}
 		case *object.Integer:
 			return arg
+		case *object.Void:
+			return &object.Integer{Value: 0}
 		default:
-			return newError("native function int: args[0] should be String, Boolean or Number")
+			return newError("native function int: arg should be String, Boolean, Number or Void")
 		}
 	}
 
@@ -146,7 +150,7 @@ func init() {
 		if len(args) != 1 {
 			return newError("native function float: len(args) should be 1")
 		}
-		switch arg := args[0].(type) {
+		switch arg := unwrapReferenceValue(args[0]).(type) {
 		case *object.String:
 			val, err := strconv.ParseFloat(arg.Value, 64)
 			if err != nil {
@@ -163,8 +167,10 @@ func init() {
 			return &object.Float{Value: float64(arg.Value)}
 		case *object.Float:
 			return arg
+		case *object.Void:
+			return &object.Float{Value: 0}
 		default:
-			return newError("native function int: args[0] should be String, Boolean or Number")
+			return newError("native function int: arg should be String, Boolean, Number or Void")
 		}
 	}
 
@@ -172,7 +178,7 @@ func init() {
 		if len(args) != 1 {
 			return newError("native function float: len(args) should be 1")
 		}
-		return booleanify(args[0])
+		return booleanify(unwrapReferenceValue(args[0]))
 	}
 
 	FETCH = func(env *object.Environment, args []object.Object) object.Object {
@@ -185,6 +191,42 @@ func init() {
 		return args[0]
 	}
 
+	APPEND = func(env *object.Environment, args []object.Object) object.Object {
+		if len(args) != 2 {
+			return newError("native function append: len(args) should be 1")
+		}
+		if array, ok := unwrapReferenceValue(args[0]).(*object.Array); ok {
+			return &object.Array{Elements: append(array.Elements, unwrapReferenceValue(args[0]))}
+		}
+		return newError("native function append: args[0] should be Array")
+	}
+
+	FIRST = func(env *object.Environment, args []object.Object) object.Object {
+		if len(args) != 1 {
+			return newError("native function first: len(args) should be 1")
+		}
+		if array, ok := args[0].(*object.Array); ok {
+			if len(array.Elements) == 0 {
+				return VOID
+			}
+			return &object.Reference{Value: &array.Elements[0]}
+		}
+		return newError("native function first: arg should be Array")
+	}
+
+	LAST = func(env *object.Environment, args []object.Object) object.Object {
+		if len(args) != 1 {
+			return newError("native function fetch: len(args) should be 1")
+		}
+		if array, ok := args[0].(*object.Array); ok {
+			if len(array.Elements) == 0 {
+				return VOID
+			}
+			return &object.Reference{Value: &array.Elements[len(array.Elements)-1]}
+		}
+		return newError("native function append: arg should be Array")
+	}
+
 	natives = map[string]*object.Native{
 		"len":     {LEN},
 		"print":   {PRINT},
@@ -195,6 +237,9 @@ func init() {
 		"float":   {FLOAT},
 		"boolean": {BOOLEAN},
 		"fetch":   {FETCH},
+		"append":  {APPEND},
+		"first":   {FIRST},
+		"last":    {LAST},
 	}
 }
 
@@ -208,6 +253,9 @@ var (
 	FLOAT   func(env *object.Environment, args []object.Object) object.Object
 	BOOLEAN func(env *object.Environment, args []object.Object) object.Object
 	FETCH   func(env *object.Environment, args []object.Object) object.Object
+	APPEND  func(env *object.Environment, args []object.Object) object.Object
+	FIRST   func(env *object.Environment, args []object.Object) object.Object
+	LAST    func(env *object.Environment, args []object.Object) object.Object
 )
 
 var natives map[string]*object.Native

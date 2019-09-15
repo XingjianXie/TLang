@@ -30,14 +30,10 @@ func main() {
 		}
 
 		evaluated := evaluator.Eval(program, env)
-		if evaluated != nil {
-			if evaluated.Type() == object.ERR {
-				_, _ = io.WriteString(os.Stderr, evaluated.Inspect())
-				_, _ = io.WriteString(os.Stderr, "\n")
-				os.Exit(1)
-			}
-			_, _ = io.WriteString(os.Stdout, evaluated.Inspect())
-			_, _ = io.WriteString(os.Stdout, "\n")
+		if evaluated.Type() == object.ERR {
+			_, _ = io.WriteString(os.Stderr, evaluated.Inspect())
+			_, _ = io.WriteString(os.Stderr, "\n")
+			os.Exit(1)
 		}
 		os.Exit(0)
 	} else if len(os.Args) == 1 {

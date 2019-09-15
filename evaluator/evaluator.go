@@ -19,37 +19,8 @@ var (
 	JUMP  = &object.Jump{}
 )
 
-const T_LANG = `                                                         
-            uuuuuuuuuuuuuuuuuuuuuuuuuuuu
-          u" uuuuuuuuuuuuuuuuuuuuuuuuuu "u
-        u" u$$$$$$$$$$$$$$$$$$$$$$$$$$$$u "u
-      u" u$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$u "u
-    u" u$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$u "u
-  u" u$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$u "u
-u" u$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$u "u
-$ $$$$$$$$$                              $$$$$$$$$ $
-$ $$$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$$$ $
-$ $$$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$$$ $
-$ $$$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$$$ $
-$ $$$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$$$ $
-$ $$$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$$$ $
-$ $$$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$$$ $
-$ $$$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$$$ $
-$ $$$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$$$ $
-$ $$$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$$$ $
-"u "$$$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$$$" u"
-  "u "$$$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$$$" u"
-    "u "$$$$$$$$$$$$$$$$$  $$$$$$$$$$$$$$$$$" u"
-      "u "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$" u"
-        "u "$$$$$$$$$$$$$$$$$$$$$$$$$$$$" u"
-          "u """""""""""""""""""""""""" u"
-            """"""""""""""""""""""""""""
-`
-
 func PrintParserErrors(out io.Writer, errors []string) {
-	_, _ = io.WriteString(out, T_LANG)
-	_, _ = io.WriteString(out, "Woops! Here are something wrong.\n")
-	_, _ = io.WriteString(out, " parser errors:\n")
+	_, _ = io.WriteString(out, "Parser Errors:\n")
 	for _, msg := range errors {
 		_, _ = io.WriteString(out, "\t"+msg+"\n")
 	}
@@ -69,6 +40,21 @@ func init() {
 			return newError("native function len: arg should be String or Array")
 		}
 	}
+	PRINT = func(env *object.Environment, args []object.Object) object.Object {
+		for _, arg := range args {
+			fmt.Print(STRING(env, []object.Object{unwrapReferenceValue(arg)}).(*object.String).Value)
+		}
+		return VOID
+	}
+	INPUT = func(env *object.Environment, args []object.Object) object.Object {
+		if len(args) != 0 {
+			return newError("native function len: len(args) should be 0")
+		}
+		var input string
+		_, _ = fmt.Scanf("%s", &input)
+
+		return &object.String{Value: input}
+	}
 	PRINT_LINE = func(env *object.Environment, args []object.Object) object.Object {
 		if len(args) == 0 {
 			fmt.Println()
@@ -79,11 +65,14 @@ func init() {
 		}
 		return VOID
 	}
-	PRINT = func(env *object.Environment, args []object.Object) object.Object {
-		for _, arg := range args {
-			fmt.Print(STRING(env, []object.Object{unwrapReferenceValue(arg)}).(*object.String).Value)
+	INPUT_LINE = func(env *object.Environment, args []object.Object) object.Object {
+		if len(args) != 0 {
+			return newError("native function len: len(args) should be 0")
 		}
-		return VOID
+		var input string
+		_, _ = fmt.Scanln(&input)
+
+		return &object.String{Value: input}
 	}
 	STRING = func(env *object.Environment, args []object.Object) object.Object {
 		if len(args) != 1 {
@@ -238,19 +227,21 @@ func init() {
 	}
 
 	natives = map[string]*object.Native{
-		"len":        {LEN},
-		"print":      {PRINT},
-		"print_line": {PRINT_LINE},
-		"string":     {STRING},
-		"exit":       {EXIT},
-		"eval":       {EVAL},
-		"int":        {INT},
-		"float":      {FLOAT},
-		"boolean":    {BOOLEAN},
-		"fetch":      {FETCH},
-		"append":     {APPEND},
-		"first":      {FIRST},
-		"last":       {LAST},
+		"len":       {LEN},
+		"print":     {PRINT},
+		"input":     {INPUT},
+		"printLine": {PRINT_LINE},
+		"inputLine": {INPUT_LINE},
+		"string":    {STRING},
+		"exit":      {EXIT},
+		"eval":      {EVAL},
+		"int":       {INT},
+		"float":     {FLOAT},
+		"boolean":   {BOOLEAN},
+		"fetch":     {FETCH},
+		"append":    {APPEND},
+		"first":     {FIRST},
+		"last":      {LAST},
 	}
 }
 
@@ -258,6 +249,8 @@ var (
 	LEN        func(env *object.Environment, args []object.Object) object.Object
 	PRINT      func(env *object.Environment, args []object.Object) object.Object
 	PRINT_LINE func(env *object.Environment, args []object.Object) object.Object
+	INPUT      func(env *object.Environment, args []object.Object) object.Object
+	INPUT_LINE func(env *object.Environment, args []object.Object) object.Object
 	STRING     func(env *object.Environment, args []object.Object) object.Object
 	EXIT       func(env *object.Environment, args []object.Object) object.Object
 	EVAL       func(env *object.Environment, args []object.Object) object.Object

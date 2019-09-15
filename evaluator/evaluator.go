@@ -69,9 +69,19 @@ func init() {
 			return newError("native function len: arg should be String or Array")
 		}
 	}
-	PRINT = func(env *object.Environment, args []object.Object) object.Object {
+	PRINT_LINE = func(env *object.Environment, args []object.Object) object.Object {
+		if len(args) == 0 {
+			fmt.Println()
+			return VOID
+		}
 		for _, arg := range args {
 			fmt.Println(STRING(env, []object.Object{unwrapReferenceValue(arg)}).(*object.String).Value)
+		}
+		return VOID
+	}
+	PRINT = func(env *object.Environment, args []object.Object) object.Object {
+		for _, arg := range args {
+			fmt.Print(STRING(env, []object.Object{unwrapReferenceValue(arg)}).(*object.String).Value)
 		}
 		return VOID
 	}
@@ -228,34 +238,36 @@ func init() {
 	}
 
 	natives = map[string]*object.Native{
-		"len":     {LEN},
-		"print":   {PRINT},
-		"string":  {STRING},
-		"exit":    {EXIT},
-		"eval":    {EVAL},
-		"int":     {INT},
-		"float":   {FLOAT},
-		"boolean": {BOOLEAN},
-		"fetch":   {FETCH},
-		"append":  {APPEND},
-		"first":   {FIRST},
-		"last":    {LAST},
+		"len":        {LEN},
+		"print":      {PRINT},
+		"print_line": {PRINT_LINE},
+		"string":     {STRING},
+		"exit":       {EXIT},
+		"eval":       {EVAL},
+		"int":        {INT},
+		"float":      {FLOAT},
+		"boolean":    {BOOLEAN},
+		"fetch":      {FETCH},
+		"append":     {APPEND},
+		"first":      {FIRST},
+		"last":       {LAST},
 	}
 }
 
 var (
-	LEN     func(env *object.Environment, args []object.Object) object.Object
-	PRINT   func(env *object.Environment, args []object.Object) object.Object
-	STRING  func(env *object.Environment, args []object.Object) object.Object
-	EXIT    func(env *object.Environment, args []object.Object) object.Object
-	EVAL    func(env *object.Environment, args []object.Object) object.Object
-	INT     func(env *object.Environment, args []object.Object) object.Object
-	FLOAT   func(env *object.Environment, args []object.Object) object.Object
-	BOOLEAN func(env *object.Environment, args []object.Object) object.Object
-	FETCH   func(env *object.Environment, args []object.Object) object.Object
-	APPEND  func(env *object.Environment, args []object.Object) object.Object
-	FIRST   func(env *object.Environment, args []object.Object) object.Object
-	LAST    func(env *object.Environment, args []object.Object) object.Object
+	LEN        func(env *object.Environment, args []object.Object) object.Object
+	PRINT      func(env *object.Environment, args []object.Object) object.Object
+	PRINT_LINE func(env *object.Environment, args []object.Object) object.Object
+	STRING     func(env *object.Environment, args []object.Object) object.Object
+	EXIT       func(env *object.Environment, args []object.Object) object.Object
+	EVAL       func(env *object.Environment, args []object.Object) object.Object
+	INT        func(env *object.Environment, args []object.Object) object.Object
+	FLOAT      func(env *object.Environment, args []object.Object) object.Object
+	BOOLEAN    func(env *object.Environment, args []object.Object) object.Object
+	FETCH      func(env *object.Environment, args []object.Object) object.Object
+	APPEND     func(env *object.Environment, args []object.Object) object.Object
+	FIRST      func(env *object.Environment, args []object.Object) object.Object
+	LAST       func(env *object.Environment, args []object.Object) object.Object
 )
 
 var natives map[string]*object.Native

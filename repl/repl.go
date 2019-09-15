@@ -24,6 +24,15 @@ func Start(in io.Reader, out io.Writer) {
 		}
 
 		line := scanner.Text()
+		for len(line) != 0 && line[len(line)-1] == '\\' {
+			line = line[:len(line)-1]
+			fmt.Printf(".. ")
+			scanned := scanner.Scan()
+			if !scanned {
+				return
+			}
+			line = line + scanner.Text()
+		}
 		l := lexer.New(line)
 		p := parser.New(l)
 

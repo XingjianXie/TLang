@@ -242,6 +242,13 @@ func init() {
 		return newError("native function append: arg should be Array")
 	}
 
+	TYPE = func(env *object.Environment, args []object.Object) object.Object {
+		if len(args) != 1 {
+			return newError("native function type: len(args) should be 1")
+		}
+		return &object.String{Value: string(args[0].Type())}
+	}
+
 	natives = map[string]*object.Native{
 		"len":       {LEN},
 		"print":     {PRINT},
@@ -258,6 +265,7 @@ func init() {
 		"append":    {APPEND},
 		"first":     {FIRST},
 		"last":      {LAST},
+		"type":      {TYPE},
 	}
 }
 
@@ -277,6 +285,7 @@ var (
 	APPEND     func(env *object.Environment, args []object.Object) object.Object
 	FIRST      func(env *object.Environment, args []object.Object) object.Object
 	LAST       func(env *object.Environment, args []object.Object) object.Object
+	TYPE       func(env *object.Environment, args []object.Object) object.Object
 )
 
 var natives map[string]*object.Native
@@ -401,10 +410,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		if isError(val) {
 			return val
 		}
-		if _, ok := env.Get(node.Name.Value); ok {
+		if _, ok := env.SetCurrent(node.Name.Value, val.Copy()); !ok {
 			return newError("identifier %s already set", node.Name.Value)
-		} else {
-			env.Set(node.Name.Value, val.Copy())
 		}
 	case *ast.RefStatement:
 		return evalRefStatement(node, env)
@@ -479,9 +486,9 @@ func extendFunctionEnv(
 
 	for paramIdx, param := range fn.Parameters {
 		if paramIdx >= len(args) {
-			env.Set(param.Value, VOID)
+			env.SetCurrent(param.Value, VOID)
 		} else {
-			env.Set(param.Value, args[paramIdx])
+			env.SetCurrent(param.Value, args[paramIdx])
 		}
 	}
 
@@ -540,7 +547,7 @@ func evalIdentifier(
 	env *object.Environment,
 ) object.Object {
 	if val, ok := env.Get(node.Value); ok {
-		return val
+		return *val
 	}
 
 	if native, ok := natives[node.Value]; ok {
@@ -586,26 +593,24 @@ func evalRefStatement(node *ast.RefStatement, env *object.Environment) object.Ob
 	if isError(val) {
 		return val
 	}
-	if _, ok := env.Get(node.Name.Value); ok {
-		return newError("identifier %s already set", node.Name.Value)
-	} else {
-		left := Eval(node.Value, env)
-		if refer, ok := left.(*object.Reference); ok {
-			env.Set(node.Name.Value, refer)
-			return VOID
-		} else {
-			if ident, ok := node.Value.(*ast.Identifier); ok {
-				//DONE REFERENCE WON'T WORK WHEN TARGET IS A IDENTIFIER
 
-				if obj, ok := env.Get(ident.Value); ok {
-					env.Set(node.Name.Value, obj)
-					return VOID
+	left := Eval(node.Value, env)
+	if refer, ok := left.(*object.Reference); ok {
+		if _, ok := env.SetCurrent(node.Name.Value, refer); !ok {
+			return newError("identifier %s already set", node.Name.Value)
+		}
+		return VOID
+	} else {
+		if ident, ok := node.Value.(*ast.Identifier); ok {
+			if obj, ok := env.Get(ident.Value); ok {
+				if _, ok := env.SetCurrent(node.Name.Value, &object.Reference{Value: obj}); !ok {
+					return newError("identifier %s already set", node.Name.Value)
 				}
-				//return newError("not support yet, refer to identifier: " + ident.Value)
+				return VOID
 			}
 		}
-		return newError("left value not a identifier or a reference: " + node.Value.String())
 	}
+	return newError("left value not a identifier or a reference: " + node.Value.String())
 }
 
 func evalPrefixExpression(operator string, right object.Object) object.Object {
@@ -651,26 +656,25 @@ func evalAssignExpression(node *ast.AssignExpression, env *object.Environment) o
 		return newVal
 	} else {
 		if ident, ok := node.Left.(*ast.Identifier); ok {
-			if _, ok := env.Get(ident.Value); ok {
-				var newVal object.Object
-				switch node.Operator {
-				case "+=":
-					newVal = evalInfixExpression("+", evalIdentifier(ident, env), val)
-				case "-=":
-					newVal = evalInfixExpression("-", evalIdentifier(ident, env), val)
-				case "*=":
-					newVal = evalInfixExpression("*", evalIdentifier(ident, env), val)
-				case "/=":
-					newVal = evalInfixExpression("/", evalIdentifier(ident, env), val)
-				case "%=":
-					newVal = evalInfixExpression("%", evalIdentifier(ident, env), val)
-				case "=":
-					newVal = val
-				}
-				if isError(newVal) {
-					return newVal
-				}
-				env.Set(ident.Value, newVal)
+			var newVal object.Object
+			switch node.Operator {
+			case "+=":
+				newVal = evalInfixExpression("+", evalIdentifier(ident, env), val)
+			case "-=":
+				newVal = evalInfixExpression("-", evalIdentifier(ident, env), val)
+			case "*=":
+				newVal = evalInfixExpression("*", evalIdentifier(ident, env), val)
+			case "/=":
+				newVal = evalInfixExpression("/", evalIdentifier(ident, env), val)
+			case "%=":
+				newVal = evalInfixExpression("%", evalIdentifier(ident, env), val)
+			case "=":
+				newVal = val.Copy()
+			}
+			if isError(newVal) {
+				return newVal
+			}
+			if _, ok := env.SetAvailable(ident.Value, newVal); ok {
 				return newVal
 			}
 		}

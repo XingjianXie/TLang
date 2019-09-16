@@ -540,3 +540,33 @@ func TestArrayFunctions(t *testing.T) {
 		testIntegerObject(t, testEval(tt.input), tt.expected)
 	}
 }
+
+func TestReference(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected int64
+	}{
+		{"let a = 1; let b = a; a = 2; b;", 1},
+		{"let a = 0; let b = 0; a = 1; b = a; a = 2; b;", 1},
+		{"let b = 0; let a = 1; b = a; a = 2; b;", 1},
+		{"let a = 0; a = 1; let b = a; a = 2; b;", 1},
+
+		{"let a = 1; let b = a; b = 2; a;", 1},
+		{"let a = 0; let b = 0; a = 1; b = a; b = 2; a;", 1},
+		{"let b = 0; let a = 1; b = a; b = 2; a;", 1},
+		{"let a = 0; a = 1; let b = a; b = 2; a;", 1},
+
+		{"let a = 1; ref b = a; a = 2; b;", 2},
+		{"let a = 0; a = 1; ref b = a; a = 2; b;", 2},
+
+		{"let a = 1; ref b = a; b = 2; a;", 2},
+		{"let a = 0; a = 1; ref b = a; b = 2; a;", 2},
+
+		{"let a = [1,2,3]; ref b = a[0]; b = 2; a[0];", 2},
+		{"let a = 0; a = [1,2,3,4]; ref b = a[1+2-1]; a[2] = 5; b;", 5},
+	}
+
+	for _, tt := range tests {
+		testIntegerObject(t, testEval(tt.input), tt.expected)
+	}
+}

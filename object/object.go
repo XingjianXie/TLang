@@ -46,7 +46,7 @@ type Integer struct {
 
 func (i *Integer) Inspect() string { return fmt.Sprintf("%d", i.Value) }
 func (i *Integer) Type() Type      { return INTEGER }
-func (i *Integer) Copy() Object    { return i }
+func (i *Integer) Copy() Object    { return *&i }
 func (i *Integer) NumberObj()      {}
 
 type Float struct {
@@ -55,7 +55,7 @@ type Float struct {
 
 func (f *Float) Inspect() string { return fmt.Sprintf("%f", f.Value) }
 func (f *Float) Type() Type      { return FLOAT }
-func (f *Float) Copy() Object    { return f }
+func (f *Float) Copy() Object    { return *&f }
 func (f *Float) NumberObj()      {}
 
 type Boolean struct {
@@ -64,13 +64,13 @@ type Boolean struct {
 
 func (b *Boolean) Inspect() string { return fmt.Sprintf("%t", b.Value) }
 func (b *Boolean) Type() Type      { return BOOLEAN }
-func (b *Boolean) Copy() Object    { return b }
+func (b *Boolean) Copy() Object    { return *&b }
 
 type Void struct{}
 
 func (v *Void) Inspect() string { return "void" }
 func (v *Void) Type() Type      { return VOID }
-func (v *Void) Copy() Object    { return v }
+func (v *Void) Copy() Object    { return *&v }
 
 type RetValue struct {
 	Value Object
@@ -92,7 +92,7 @@ type Jump struct{}
 
 func (j *Jump) Inspect() string { return "jump" }
 func (j *Jump) Type() Type      { return JUMP }
-func (j *Jump) Copy() Object    { return j }
+func (j *Jump) Copy() Object    { return *&j }
 
 type Err struct {
 	Message string
@@ -100,7 +100,7 @@ type Err struct {
 
 func (err *Err) Inspect() string { return "ERROR: " + err.Message }
 func (err *Err) Type() Type      { return ERR }
-func (err *Err) Copy() Object    { return err }
+func (err *Err) Copy() Object    { return *&err }
 
 type Function struct {
 	Parameters []*ast.Identifier
@@ -125,7 +125,7 @@ func (f *Function) Inspect() string {
 	return out.String()
 }
 func (f *Function) Type() Type   { return FUNCTION }
-func (f *Function) Copy() Object { return f }
+func (f *Function) Copy() Object { return *&f }
 
 type String struct {
 	Value string
@@ -133,7 +133,7 @@ type String struct {
 
 func (s *String) Inspect() string   { return "\"" + s.Value + "\"" }
 func (s *String) Type() Type        { return STRING }
-func (s *String) Copy() Object      { return s }
+func (s *String) Copy() Object      { return *&s }
 func (s *String) LetterObj() string { return s.Value }
 
 type Character struct {
@@ -142,7 +142,7 @@ type Character struct {
 
 func (c *Character) Inspect() string   { return "'" + string(c.Value) + "'" }
 func (c *Character) Type() Type        { return CHARACTER }
-func (c *Character) Copy() Object      { return c }
+func (c *Character) Copy() Object      { return *&c }
 func (c *Character) LetterObj() string { return string(c.Value) }
 
 type Native struct {
@@ -151,7 +151,7 @@ type Native struct {
 
 func (n *Native) Inspect() string { return "func [Native]" }
 func (n *Native) Type() Type      { return NATIVE }
-func (n *Native) Copy() Object    { return n }
+func (n *Native) Copy() Object    { return *&n }
 
 type Array struct {
 	Elements []Object

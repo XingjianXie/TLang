@@ -7,16 +7,16 @@ func NewEnclosedEnvironment(outer *Environment) *Environment {
 }
 
 func NewEnvironment() *Environment {
-	s := make(map[string]Object)
+	s := make(map[string]*Object)
 	return &Environment{store: s, outer: nil}
 }
 
 type Environment struct {
-	store map[string]Object
+	store map[string]*Object
 	outer *Environment
 }
 
-func (e *Environment) Get(name string) (Object, bool) {
+func (e *Environment) Get(name string) (*Object, bool) {
 	obj, ok := e.store[name]
 	if !ok && e.outer != nil {
 		obj, ok = e.outer.Get(name)
@@ -24,9 +24,25 @@ func (e *Environment) Get(name string) (Object, bool) {
 	return obj, ok
 }
 
-func (e *Environment) Set(name string, val Object) Object {
-	e.store[name] = val
-	return val
+func (e *Environment) SetCurrent(name string, val Object) (*Object, bool) {
+	_, ok := e.store[name]
+	if ok {
+		return nil, false
+	}
+	e.store[name] = &val
+	return &val, true
+}
+
+func (e *Environment) SetAvailable(name string, val Object) (*Object, bool) {
+	_, ok := e.store[name]
+	if ok {
+		*e.store[name] = val
+		return &val, ok
+	}
+	if e.outer != nil {
+		return e.outer.SetAvailable(name, val)
+	}
+	return nil, false
 }
 
 func (e *Environment) Del(name string) {

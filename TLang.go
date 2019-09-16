@@ -16,7 +16,7 @@ func main() {
 	if len(os.Args) == 2 {
 		data, err := ioutil.ReadFile(os.Args[1])
 		if err != nil {
-			fmt.Print(err)
+			print(err)
 			os.Exit(1)
 		}
 		env := object.NewEnvironment()

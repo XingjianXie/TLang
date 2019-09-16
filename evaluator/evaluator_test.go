@@ -564,6 +564,8 @@ func TestReference(t *testing.T) {
 
 		{"let a = [1,2,3]; ref b = a[0]; b = 2; a[0];", 2},
 		{"let a = 0; a = [1,2,3,4]; ref b = a[1+2-1]; a[2] = 5; b;", 5},
+
+		{"let a = [1,2,3,4,[1,2,3]]; ref b = a[4]; b[0] = 2; a[4][0];", 2},
 	}
 
 	for _, tt := range tests {

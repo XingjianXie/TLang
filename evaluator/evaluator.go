@@ -1008,7 +1008,7 @@ func evalLoopExpression(le *ast.LoopExpression, env *object.Environment) object.
 	}
 
 	for isTruthy(condition) {
-		newResult := Eval(le.Body, env)
+		newResult := Eval(le.Body, object.NewEnclosedEnvironment(env))
 		if isError(newResult) || newResult.Type() == object.RET {
 			return newResult
 		}

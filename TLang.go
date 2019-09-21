@@ -37,7 +37,7 @@ func main() {
 		}
 		os.Exit(0)
 	} else if len(os.Args) == 1 {
-		fmt.Printf("Welcome to T language!\n")
+		fmt.Printf("Welcome to T Language!\n")
 		repl.Start(os.Stdin, os.Stdout)
 	} else {
 		fmt.Printf("Usage: " + os.Args[0] + " <file>")

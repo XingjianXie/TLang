@@ -53,7 +53,7 @@ type Float struct {
 	Value float64
 }
 
-func (f *Float) Inspect() string { return fmt.Sprintf("%f", f.Value) }
+func (f *Float) Inspect() string { return fmt.Sprintf("%g", f.Value) }
 func (f *Float) Type() Type      { return FLOAT }
 func (f *Float) Copy() Object    { return f }
 func (f *Float) NumberObj()      {}
@@ -167,6 +167,7 @@ func (n *Native) Copy() Object    { return n }
 
 type Array struct {
 	Elements []Object
+	Copyable bool
 }
 
 func (a *Array) Inspect() string {
@@ -185,6 +186,10 @@ func (a *Array) Inspect() string {
 }
 func (a *Array) Type() Type { return ARRAY }
 func (a *Array) Copy() Object {
+	if a.Copyable {
+		a.Copyable = false
+		return a
+	}
 	var elements []Object
 	for _, e := range a.Elements {
 		elements = append(elements, e.Copy())

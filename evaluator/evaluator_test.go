@@ -77,7 +77,7 @@ func testFloatObject(t *testing.T, obj object.Object, expected float64) bool {
 		return false
 	}
 	if result.Value != expected {
-		t.Errorf("object has wrong value. got=%f, want=%f",
+		t.Errorf("object has wrong value. got=%g, want=%g",
 			result.Value, expected)
 		return false
 	}
@@ -561,6 +561,8 @@ func TestReference(t *testing.T) {
 
 		{"let a = 1; ref b = a; b = 2; a;", 2},
 		{"let a = 0; a = 1; ref b = a; b = 2; a;", 2},
+
+		{"let a = [1,2,3,4,[1,2,3]]; let b = a[4]; b[0] = 2; a[4][0];", 1},
 
 		{"let a = [1,2,3]; ref b = a[0]; b = 2; a[0];", 2},
 		{"let a = 0; a = [1,2,3,4]; ref b = a[1+2-1]; a[2] = 5; b;", 5},

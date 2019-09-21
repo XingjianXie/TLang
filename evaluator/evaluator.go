@@ -208,10 +208,10 @@ func init() {
 
 	APPEND = func(env *object.Environment, args []object.Object) object.Object {
 		if len(args) != 2 {
-			return newError("native function append: len(args) should be 1")
+			return newError("native function append: len(args) should be 2")
 		}
 		if array, ok := unwrapReferenceValue(args[0]).(*object.Array); ok {
-			return &object.Array{Elements: append(array.Elements, unwrapReferenceValue(args[1]))}
+			return &object.Array{Elements: append(array.Elements, unwrapReferenceValue(args[1])), Copyable: true}
 		}
 		return newError("native function append: args[0] should be Array")
 	}
@@ -249,6 +249,55 @@ func init() {
 		return &object.String{Value: string(args[0].Type())}
 	}
 
+	ARRAY = func(env *object.Environment, args []object.Object) object.Object {
+		if len(args) == 1 {
+			if length, ok := unwrapReferenceValue(args[0]).(*object.Integer); ok {
+				var eles []object.Object
+				for i := int64(0); i < length.Value; i++ {
+					eles = append(eles, VOID)
+				}
+
+				return &object.Array{
+					Elements: eles,
+					Copyable: true,
+				}
+			}
+			return newError("native function array: args[0] should be Integer")
+		} else if len(args) == 2 {
+			if length, ok := unwrapReferenceValue(args[0]).(*object.Integer); ok {
+				var eles []object.Object
+				for i := int64(0); i < length.Value; i++ {
+					eles = append(eles, unwrapReferenceValue(args[1]))
+				}
+
+				return &object.Array{
+					Elements: eles,
+					Copyable: true,
+				}
+			}
+			return newError("native function array: args[0] should be Integer")
+		} else if len(args) == 3 {
+			if length, ok := unwrapReferenceValue(args[0]).(*object.Integer); ok {
+				if function, ok := unwrapReferenceValue(args[2]).(*object.Function); ok {
+					var eles []object.Object
+					ele := unwrapReferenceValue(args[1])
+					for i := int64(0); i < length.Value; i++ {
+						ele = applyFunction(function, []object.Object{&object.Integer{Value: i}, ele}, env)
+						eles = append(eles, ele)
+					}
+
+					return &object.Array{
+						Elements: eles,
+						Copyable: true,
+					}
+				}
+				return newError("native function array: args[2] should be Function")
+			}
+			return newError("native function array: args[0] should be Integer")
+		}
+		return newError("native function array: len(args) should be 1, 2 or 3")
+	}
+
 	natives = map[string]*object.Native{
 		"len":       {LEN},
 		"print":     {PRINT},
@@ -266,6 +315,7 @@ func init() {
 		"first":     {FIRST},
 		"last":      {LAST},
 		"type":      {TYPE},
+		"array":     {ARRAY},
 	}
 }
 
@@ -286,6 +336,7 @@ var (
 	FIRST      func(env *object.Environment, args []object.Object) object.Object
 	LAST       func(env *object.Environment, args []object.Object) object.Object
 	TYPE       func(env *object.Environment, args []object.Object) object.Object
+	ARRAY      func(env *object.Environment, args []object.Object) object.Object
 )
 
 var natives map[string]*object.Native
@@ -335,7 +386,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		if len(elements) == 1 && isError(elements[0]) {
 			return elements[0]
 		}
-		return &object.Array{Elements: elements}
+		return &object.Array{Elements: elements, Copyable: false}
 
 	case *ast.PrefixExpression:
 		right := unwrapReferenceValue(Eval(node.Right, env))

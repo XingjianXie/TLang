@@ -185,8 +185,8 @@ func TestIfElseExpressions(t *testing.T) {
 }
 
 func testNullObject(t *testing.T, obj object.Object) bool {
-	if obj != VOID {
-		t.Errorf("object is not VOID. got=%T (%+v)", obj, obj)
+	if obj != Void {
+		t.Errorf("object is not Void. got=%T (%+v)", obj, obj)
 		return false
 	}
 	return true

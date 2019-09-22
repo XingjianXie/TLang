@@ -46,9 +46,9 @@ func (l *Lexer) NextToken() token.Token {
 			ch := l.ch
 			l.readChar()
 			literal := string(ch) + string(l.ch)
-			tok = token.Token{Type: token.EQ, Literal: literal}
+			tok = token.Token{Type: token.Eq, Literal: literal}
 		} else {
-			tok = newToken(token.ASSIGN, l.ch)
+			tok = newToken(token.Assign, l.ch)
 		}
 
 	case '+':
@@ -56,9 +56,9 @@ func (l *Lexer) NextToken() token.Token {
 			ch := l.ch
 			l.readChar()
 			literal := string(ch) + string(l.ch)
-			tok = token.Token{Type: token.PLUS_EQ, Literal: literal}
+			tok = token.Token{Type: token.PlusEq, Literal: literal}
 		} else {
-			tok = newToken(token.PLUS, l.ch)
+			tok = newToken(token.Plus, l.ch)
 		}
 
 	case '-':
@@ -66,9 +66,9 @@ func (l *Lexer) NextToken() token.Token {
 			ch := l.ch
 			l.readChar()
 			literal := string(ch) + string(l.ch)
-			tok = token.Token{Type: token.MINUS_EQ, Literal: literal}
+			tok = token.Token{Type: token.MinusEq, Literal: literal}
 		} else {
-			tok = newToken(token.MINUS, l.ch)
+			tok = newToken(token.Minus, l.ch)
 		}
 
 	case '*':
@@ -76,9 +76,9 @@ func (l *Lexer) NextToken() token.Token {
 			ch := l.ch
 			l.readChar()
 			literal := string(ch) + string(l.ch)
-			tok = token.Token{Type: token.ASTERISK_EQ, Literal: literal}
+			tok = token.Token{Type: token.AsteriskEq, Literal: literal}
 		} else {
-			tok = newToken(token.ASTERISK, l.ch)
+			tok = newToken(token.Asterisk, l.ch)
 		}
 
 	case '/':
@@ -86,9 +86,9 @@ func (l *Lexer) NextToken() token.Token {
 			ch := l.ch
 			l.readChar()
 			literal := string(ch) + string(l.ch)
-			tok = token.Token{Type: token.SLASH_EQ, Literal: literal}
+			tok = token.Token{Type: token.SlashEq, Literal: literal}
 		} else {
-			tok = newToken(token.SLASH, l.ch)
+			tok = newToken(token.Slash, l.ch)
 		}
 
 	case '%':
@@ -96,9 +96,9 @@ func (l *Lexer) NextToken() token.Token {
 			ch := l.ch
 			l.readChar()
 			literal := string(ch) + string(l.ch)
-			tok = token.Token{Type: token.PERCENTAGE_EQ, Literal: literal}
+			tok = token.Token{Type: token.PercentageEq, Literal: literal}
 		} else {
-			tok = newToken(token.PERCENTAGE, l.ch)
+			tok = newToken(token.Percentage, l.ch)
 		}
 
 	case '!':
@@ -106,9 +106,9 @@ func (l *Lexer) NextToken() token.Token {
 			ch := l.ch
 			l.readChar()
 			literal := string(ch) + string(l.ch)
-			tok = token.Token{Type: token.NOT_EQ, Literal: literal}
+			tok = token.Token{Type: token.NotEq, Literal: literal}
 		} else {
-			tok = newToken(token.BANG, l.ch)
+			tok = newToken(token.Bang, l.ch)
 		}
 
 	case '<':
@@ -116,9 +116,9 @@ func (l *Lexer) NextToken() token.Token {
 			ch := l.ch
 			l.readChar()
 			literal := string(ch) + string(l.ch)
-			tok = token.Token{Type: token.LT_EQ, Literal: literal}
+			tok = token.Token{Type: token.LtEq, Literal: literal}
 		} else {
-			tok = newToken(token.LT, l.ch)
+			tok = newToken(token.Lt, l.ch)
 		}
 
 	case '>':
@@ -126,43 +126,43 @@ func (l *Lexer) NextToken() token.Token {
 			ch := l.ch
 			l.readChar()
 			literal := string(ch) + string(l.ch)
-			tok = token.Token{Type: token.GT_EQ, Literal: literal}
+			tok = token.Token{Type: token.GtEq, Literal: literal}
 		} else {
-			tok = newToken(token.GT, l.ch)
+			tok = newToken(token.Gt, l.ch)
 		}
 
 	case ';':
-		tok = newToken(token.SEMICOLON, l.ch)
+		tok = newToken(token.Semicolon, l.ch)
 	case ',':
-		tok = newToken(token.COMMA, l.ch)
+		tok = newToken(token.Comma, l.ch)
 	case '(':
-		tok = newToken(token.LPAREN, l.ch)
+		tok = newToken(token.Lparen, l.ch)
 	case ')':
-		tok = newToken(token.RPAREN, l.ch)
+		tok = newToken(token.Rparen, l.ch)
 	case '{':
-		tok = newToken(token.LBRACE, l.ch)
+		tok = newToken(token.Lbrace, l.ch)
 	case '}':
-		tok = newToken(token.RBRACE, l.ch)
+		tok = newToken(token.Rbrace, l.ch)
 	case '[':
-		tok = newToken(token.LBRACKET, l.ch)
+		tok = newToken(token.Lbracket, l.ch)
 	case ']':
-		tok = newToken(token.RBRACKET, l.ch)
+		tok = newToken(token.Rbracket, l.ch)
 	case '.':
 		if isDigit(l.peekChar()) {
 			tok.Literal = l.readNumber()
-			tok.Type = token.NUMBER
+			tok.Type = token.Number
 			return tok
 		}
-		tok = newToken(token.DOT, l.ch)
+		tok = newToken(token.Dot, l.ch)
 	case '"':
-		tok.Type = token.STRING
+		tok.Type = token.String
 		tok.Literal = l.readString()
 	case '\'':
-		tok.Type = token.CHARACTER
+		tok.Type = token.Character
 		tok.Literal = l.readCharacter()
 	case 0:
 		tok.Literal = ""
-		tok.Type = token.EOF
+		tok.Type = token.Eof
 	default:
 		if isLetter(l.ch) {
 			tok.Literal = l.readIdentifier()
@@ -170,10 +170,10 @@ func (l *Lexer) NextToken() token.Token {
 			return tok
 		} else if isDigit(l.ch) {
 			tok.Literal = l.readNumber()
-			tok.Type = token.NUMBER
+			tok.Type = token.Number
 			return tok
 		} else {
-			tok = newToken(token.ILLEGAL, l.ch)
+			tok = newToken(token.Illegal, l.ch)
 		}
 	}
 

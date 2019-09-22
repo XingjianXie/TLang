@@ -44,7 +44,7 @@ func (p *Program) String() string {
 }
 
 type LetStatement struct {
-	Token token.Token // the token.LET token
+	Token token.Token // the token.Let token
 	Name  *Identifier
 	Value Expression
 }
@@ -68,7 +68,7 @@ func (ls *LetStatement) String() string {
 }
 
 type RefStatement struct {
-	Token token.Token // the token.REF token
+	Token token.Token // the token.Ref token
 	Name  *Identifier
 	Value Expression
 }
@@ -92,7 +92,7 @@ func (rs *RefStatement) String() string {
 }
 
 type AssignExpression struct {
-	Token    token.Token // the token.LET token
+	Token    token.Token // the token.Let token
 	Left     Expression
 	Operator string
 	Value    Expression
@@ -185,7 +185,7 @@ func (rs *DelStatement) String() string {
 }
 
 type Identifier struct {
-	Token token.Token // the token.IDENT token
+	Token token.Token // the token.Ident token
 	Value string
 }
 
@@ -373,14 +373,14 @@ func (fl *FunctionLiteral) String() string {
 	return out.String()
 }
 
-type UnderFuncLiteral struct {
+type UnderLineLiteral struct {
 	Token token.Token // The '_' token
 	Body  *BlockStatement
 }
 
-func (ul *UnderFuncLiteral) expressionNode()      {}
-func (ul *UnderFuncLiteral) TokenLiteral() string { return ul.Token.Literal }
-func (ul *UnderFuncLiteral) String() string {
+func (ul *UnderLineLiteral) expressionNode()      {}
+func (ul *UnderLineLiteral) TokenLiteral() string { return ul.Token.Literal }
+func (ul *UnderLineLiteral) String() string {
 	var out bytes.Buffer
 
 	out.WriteString(ul.TokenLiteral())

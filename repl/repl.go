@@ -43,7 +43,7 @@ func Start(in io.Reader, out io.Writer) {
 		}
 
 		evaluated := evaluator.Eval(program, env)
-		if evaluated != evaluator.VOID {
+		if evaluated != evaluator.Void {
 			_, _ = io.WriteString(out, evaluated.Inspect())
 			_, _ = io.WriteString(out, "\n")
 		}

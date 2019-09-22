@@ -8,92 +8,92 @@ type Token struct {
 }
 
 var keywords = map[string]Type{
-	"func":  FUNCTION,
-	"let":   LET,
-	"ref":   REF,
-	"true":  TRUE,
-	"false": FALSE,
-	"void":  VOID,
-	"if":    IF,
-	"else":  ELSE,
-	"loop":  LOOP,
-	"out":   OUT,
-	"jump":  JUMP,
-	"ret":   RET,
-	"del":   DEL,
-	"and":   AND,
-	"or":    OR,
-	"_":     UNDERLINE,
+	"func":  Function,
+	"let":   Let,
+	"ref":   Ref,
+	"true":  True,
+	"false": False,
+	"void":  Void,
+	"if":    If,
+	"else":  Else,
+	"loop":  Loop,
+	"out":   Out,
+	"jump":  Jump,
+	"ret":   Ret,
+	"del":   Del,
+	"and":   And,
+	"or":    Or,
+	"_":     Underline,
 }
 
 func LookupIdent(ident string) Type {
 	if tok, ok := keywords[ident]; ok {
 		return tok
 	}
-	return IDENT
+	return Ident
 }
 
 const (
-	ILLEGAL = "ILLEGAL"
-	EOF     = "EOF"
+	Illegal = "Illegal"
+	Eof     = "Eof"
 
 	// Identifiers + literals
-	IDENT     = "IDENT"     // add, foobar, x, y, ...
-	NUMBER    = "NUMBER"    // 1343456
-	STRING    = "STRING"    // "Hello World"
-	CHARACTER = "CHARACTER" // '1'
+	Ident     = "Ident"     // add, foobar, x, y, ...
+	Number    = "Number"    // 1343456
+	String    = "String"    // "Hello World"
+	Character = "Character" // '1'
 
 	// Operators
-	ASSIGN     = "="
-	PLUS       = "+"
-	MINUS      = "-"
-	ASTERISK   = "*"
-	SLASH      = "/"
-	PERCENTAGE = "%"
-	BANG       = "!"
-	DOT        = "."
+	Assign     = "="
+	Plus       = "+"
+	Minus      = "-"
+	Asterisk   = "*"
+	Slash      = "/"
+	Percentage = "%"
+	Bang       = "!"
+	Dot        = "."
 
-	LT = "<"
-	GT = ">"
+	Lt = "<"
+	Gt = ">"
 
-	EQ     = "=="
-	NOT_EQ = "!="
+	Eq    = "=="
+	NotEq = "!="
 
-	PLUS_EQ       = "+="
-	MINUS_EQ      = "-="
-	ASTERISK_EQ   = "*="
-	SLASH_EQ      = "/="
-	PERCENTAGE_EQ = "%="
+	PlusEq       = "+="
+	MinusEq      = "-="
+	AsteriskEq   = "*="
+	SlashEq      = "/="
+	PercentageEq = "%="
 
-	LT_EQ = "<="
-	GT_EQ = ">="
+	LtEq = "<="
+	GtEq = ">="
 
 	// Delimiters
-	COMMA     = ","
-	SEMICOLON = ";"
+	Comma     = ","
+	Semicolon = ";"
 
-	LPAREN   = "("
-	RPAREN   = ")"
-	LBRACE   = "{"
-	RBRACE   = "}"
-	LBRACKET = "["
-	RBRACKET = "]"
+	Lparen   = "("
+	Rparen   = ")"
+	Lbrace   = "{"
+	Rbrace   = "}"
+	Lbracket = "["
+	Rbracket = "]"
 
 	// Keywords
-	FUNCTION  = "FUNCTION"
-	LET       = "LET"
-	REF       = "REF"
-	TRUE      = "TRUE"
-	FALSE     = "FALSE"
-	VOID      = "VOID"
-	IF        = "IF"
-	ELSE      = "ELSE"
-	LOOP      = "LOOP"
-	OUT       = "OUT"
-	JUMP      = "JUMP"
-	RET       = "RET"
-	UNDERLINE = "UNDERLINE"
-	AND       = "AND"
-	OR        = "OR"
-	DEL       = "DEL"
+	Function  = "Function"
+	Let       = "Let"
+	Ref       = "Ref"
+	True      = "True"
+	False     = "False"
+	Void      = "Void"
+	If        = "If"
+	Else      = "Else"
+	Loop      = "Loop"
+	Out       = "Out"
+	Jump      = "Jump"
+	Ret       = "Ret"
+	Underline = "Underline"
+	And       = "And"
+	Or        = "Or"
+	Del       = "Del"
 )

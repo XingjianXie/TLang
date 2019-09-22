@@ -9,13 +9,13 @@ func TestString(t *testing.T) {
 	program := &Program{
 		Statements: []Statement{
 			&LetStatement{
-				Token: token.Token{Type: token.LET, Literal: "let"},
+				Token: token.Token{Type: token.Let, Literal: "let"},
 				Name: &Identifier{
-					Token: token.Token{Type: token.IDENT, Literal: "myVar"},
+					Token: token.Token{Type: token.Ident, Literal: "myVar"},
 					Value: "myVar",
 				},
 				Value: &Identifier{
-					Token: token.Token{Type: token.IDENT, Literal: "anotherVar"},
+					Token: token.Token{Type: token.Ident, Literal: "anotherVar"},
 					Value: "anotherVar",
 				},
 			},

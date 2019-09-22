@@ -13,21 +13,21 @@ import (
 )
 
 var (
-	TRUE  = &object.Boolean{Value: true}
-	FALSE = &object.Boolean{Value: false}
-	VOID  = &object.Void{}
-	JUMP  = &object.Jump{}
+	True  object.Object = &object.Boolean{Value: true}
+	False object.Object = &object.Boolean{Value: false}
+	Void  object.Object = &object.Void{}
+	Jump  object.Object = &object.Jump{}
 )
 
 func PrintParserErrors(out io.Writer, errors []string) {
-	_, _ = io.WriteString(out, "Parser Errors:\n")
+	_, _ = io.WriteString(out, "PARSER ERRORS:\n")
 	for _, msg := range errors {
-		_, _ = io.WriteString(out, "\t"+msg+"\n")
+		_, _ = io.WriteString(out, "    "+msg+"\n")
 	}
 }
 
 func init() {
-	LEN = func(env *object.Environment, args []object.Object) object.Object {
+	NativeLen = func(env *object.Environment, args []object.Object) object.Object {
 		if len(args) != 1 {
 			return newError("native function len: len(args) should be 1")
 		}
@@ -40,13 +40,13 @@ func init() {
 			return newError("native function len: arg should be String or Array")
 		}
 	}
-	PRINT = func(env *object.Environment, args []object.Object) object.Object {
+	NativePrint = func(env *object.Environment, args []object.Object) object.Object {
 		for _, arg := range args {
-			fmt.Print(STRING(env, []object.Object{unwrapReferenceValue(arg)}).(*object.String).Value)
+			fmt.Print(NativeString(env, []object.Object{unwrapReferenceValue(arg)}).(*object.String).Value)
 		}
-		return VOID
+		return Void
 	}
-	INPUT = func(env *object.Environment, args []object.Object) object.Object {
+	NativeInput = func(env *object.Environment, args []object.Object) object.Object {
 		if len(args) != 0 {
 			return newError("native function len: len(args) should be 0")
 		}
@@ -55,17 +55,17 @@ func init() {
 
 		return &object.String{Value: input}
 	}
-	PRINT_LINE = func(env *object.Environment, args []object.Object) object.Object {
+	NativePrintLine = func(env *object.Environment, args []object.Object) object.Object {
 		if len(args) == 0 {
 			fmt.Println()
-			return VOID
+			return Void
 		}
 		for _, arg := range args {
-			fmt.Println(STRING(env, []object.Object{unwrapReferenceValue(arg)}).(*object.String).Value)
+			fmt.Println(NativeString(env, []object.Object{unwrapReferenceValue(arg)}).(*object.String).Value)
 		}
-		return VOID
+		return Void
 	}
-	INPUT_LINE = func(env *object.Environment, args []object.Object) object.Object {
+	NativeInputLine = func(env *object.Environment, args []object.Object) object.Object {
 		if len(args) != 0 {
 			return newError("native function len: len(args) should be 0")
 		}
@@ -74,7 +74,7 @@ func init() {
 
 		return &object.String{Value: input}
 	}
-	STRING = func(env *object.Environment, args []object.Object) object.Object {
+	NativeString = func(env *object.Environment, args []object.Object) object.Object {
 		if len(args) != 1 {
 			return newError("native function string: len(args) should be 1")
 		}
@@ -87,7 +87,7 @@ func init() {
 		}
 		return &object.String{Value: un.Inspect()}
 	}
-	EXIT = func(env *object.Environment, args []object.Object) object.Object {
+	NativeExit = func(env *object.Environment, args []object.Object) object.Object {
 		if len(args) != 1 && len(args) != 0 {
 			return newError("native function exit: len(args) should be 1 or 0")
 		}
@@ -99,9 +99,9 @@ func init() {
 			return newError("native function len: arg should be Integer")
 		}
 		os.Exit(0)
-		return VOID
+		return Void
 	}
-	EVAL = func(env *object.Environment, args []object.Object) object.Object {
+	NativeEval = func(env *object.Environment, args []object.Object) object.Object {
 		if len(args) != 1 {
 			return newError("native function eval: len(args) should be 1")
 		}
@@ -121,7 +121,7 @@ func init() {
 
 		return newError("native function eval: args should be String")
 	}
-	INT = func(env *object.Environment, args []object.Object) object.Object {
+	NativeInt = func(env *object.Environment, args []object.Object) object.Object {
 		if len(args) != 1 {
 			return newError("native function int: len(args) should be 1")
 		}
@@ -155,7 +155,7 @@ func init() {
 		}
 	}
 
-	FLOAT = func(env *object.Environment, args []object.Object) object.Object {
+	NativeFloat = func(env *object.Environment, args []object.Object) object.Object {
 		if len(args) != 1 {
 			return newError("native function float: len(args) should be 1")
 		}
@@ -189,14 +189,14 @@ func init() {
 		}
 	}
 
-	BOOLEAN = func(env *object.Environment, args []object.Object) object.Object {
+	NativeBoolean = func(env *object.Environment, args []object.Object) object.Object {
 		if len(args) != 1 {
 			return newError("native function float: len(args) should be 1")
 		}
 		return toBoolean(unwrapReferenceValue(args[0]))
 	}
 
-	FETCH = func(env *object.Environment, args []object.Object) object.Object {
+	NativeFetch = func(env *object.Environment, args []object.Object) object.Object {
 		if len(args) != 1 {
 			return newError("native function fetch: len(args) should be 1")
 		}
@@ -206,7 +206,7 @@ func init() {
 		return args[0]
 	}
 
-	APPEND = func(env *object.Environment, args []object.Object) object.Object {
+	NativeAppend = func(env *object.Environment, args []object.Object) object.Object {
 		if len(args) != 2 {
 			return newError("native function append: len(args) should be 2")
 		}
@@ -216,62 +216,62 @@ func init() {
 		return newError("native function append: args[0] should be Array")
 	}
 
-	FIRST = func(env *object.Environment, args []object.Object) object.Object {
+	NativeFirst = func(env *object.Environment, args []object.Object) object.Object {
 		if len(args) != 1 {
 			return newError("native function first: len(args) should be 1")
 		}
 		if array, ok := unwrapReferenceValue(args[0]).(*object.Array); ok {
 			if len(array.Elements) == 0 {
-				return VOID
+				return Void
 			}
 			return &object.Reference{Value: &array.Elements[0], Const: false}
 		}
 		return newError("native function first: arg should be Array")
 	}
 
-	LAST = func(env *object.Environment, args []object.Object) object.Object {
+	NativeLast = func(env *object.Environment, args []object.Object) object.Object {
 		if len(args) != 1 {
 			return newError("native function fetch: len(args) should be 1")
 		}
 		if array, ok := unwrapReferenceValue(args[0]).(*object.Array); ok {
 			if len(array.Elements) == 0 {
-				return VOID
+				return Void
 			}
 			return &object.Reference{Value: &array.Elements[len(array.Elements)-1], Const: false}
 		}
 		return newError("native function append: arg should be Array")
 	}
 
-	TYPE = func(env *object.Environment, args []object.Object) object.Object {
+	NativeType = func(env *object.Environment, args []object.Object) object.Object {
 		if len(args) != 1 {
 			return newError("native function type: len(args) should be 1")
 		}
 		return &object.String{Value: string(args[0].Type())}
 	}
 
-	ARRAY = func(env *object.Environment, args []object.Object) object.Object {
+	NativeArray = func(env *object.Environment, args []object.Object) object.Object {
 		if len(args) == 1 {
 			if length, ok := unwrapReferenceValue(args[0]).(*object.Integer); ok {
-				var eles []object.Object
+				var elem []object.Object
 				for i := int64(0); i < length.Value; i++ {
-					eles = append(eles, VOID)
+					elem = append(elem, Void)
 				}
 
 				return &object.Array{
-					Elements: eles,
+					Elements: elem,
 					Copyable: true,
 				}
 			}
 			return newError("native function array: args[0] should be Integer")
 		} else if len(args) == 2 {
 			if length, ok := unwrapReferenceValue(args[0]).(*object.Integer); ok {
-				var eles []object.Object
+				var elem []object.Object
 				for i := int64(0); i < length.Value; i++ {
-					eles = append(eles, unwrapReferenceValue(args[1]))
+					elem = append(elem, unwrapReferenceValue(args[1]))
 				}
 
 				return &object.Array{
-					Elements: eles,
+					Elements: elem,
 					Copyable: true,
 				}
 			}
@@ -279,18 +279,18 @@ func init() {
 		} else if len(args) == 3 {
 			if length, ok := unwrapReferenceValue(args[0]).(*object.Integer); ok {
 				if function, ok := unwrapReferenceValue(args[2]).(object.LikeFunction); ok {
-					var eles []object.Object
-					ele := unwrapReferenceValue(args[1])
+					var elem []object.Object
+					e := unwrapReferenceValue(args[1])
 					for i := int64(0); i < length.Value; i++ {
-						ele = applyFunction(function, []object.Object{&object.Integer{Value: i}, ele}, env)
-						if isError(ele) {
-							return ele
+						e = applyFunction(function, []object.Object{&object.Integer{Value: i}, e}, env)
+						if isError(e) {
+							return e
 						}
-						eles = append(eles, ele)
+						elem = append(elem, e)
 					}
 
 					return &object.Array{
-						Elements: eles,
+						Elements: elem,
 						Copyable: true,
 					}
 				}
@@ -302,44 +302,44 @@ func init() {
 	}
 
 	natives = map[string]*object.Native{
-		"len":       {LEN},
-		"print":     {PRINT},
-		"input":     {INPUT},
-		"printLine": {PRINT_LINE},
-		"inputLine": {INPUT_LINE},
-		"string":    {STRING},
-		"exit":      {EXIT},
-		"eval":      {EVAL},
-		"int":       {INT},
-		"float":     {FLOAT},
-		"boolean":   {BOOLEAN},
-		"fetch":     {FETCH},
-		"append":    {APPEND},
-		"first":     {FIRST},
-		"last":      {LAST},
-		"type":      {TYPE},
-		"array":     {ARRAY},
+		"len":       {NativeLen},
+		"print":     {NativePrint},
+		"input":     {NativeInput},
+		"printLine": {NativePrintLine},
+		"inputLine": {NativeInputLine},
+		"string":    {NativeString},
+		"exit":      {NativeExit},
+		"eval":      {NativeEval},
+		"int":       {NativeInt},
+		"float":     {NativeFloat},
+		"boolean":   {NativeBoolean},
+		"fetch":     {NativeFetch},
+		"append":    {NativeAppend},
+		"first":     {NativeFirst},
+		"last":      {NativeLast},
+		"type":      {NativeType},
+		"array":     {NativeArray},
 	}
 }
 
 var (
-	LEN        func(env *object.Environment, args []object.Object) object.Object
-	PRINT      func(env *object.Environment, args []object.Object) object.Object
-	PRINT_LINE func(env *object.Environment, args []object.Object) object.Object
-	INPUT      func(env *object.Environment, args []object.Object) object.Object
-	INPUT_LINE func(env *object.Environment, args []object.Object) object.Object
-	STRING     func(env *object.Environment, args []object.Object) object.Object
-	EXIT       func(env *object.Environment, args []object.Object) object.Object
-	EVAL       func(env *object.Environment, args []object.Object) object.Object
-	INT        func(env *object.Environment, args []object.Object) object.Object
-	FLOAT      func(env *object.Environment, args []object.Object) object.Object
-	BOOLEAN    func(env *object.Environment, args []object.Object) object.Object
-	FETCH      func(env *object.Environment, args []object.Object) object.Object
-	APPEND     func(env *object.Environment, args []object.Object) object.Object
-	FIRST      func(env *object.Environment, args []object.Object) object.Object
-	LAST       func(env *object.Environment, args []object.Object) object.Object
-	TYPE       func(env *object.Environment, args []object.Object) object.Object
-	ARRAY      func(env *object.Environment, args []object.Object) object.Object
+	NativeLen       func(env *object.Environment, args []object.Object) object.Object
+	NativePrint     func(env *object.Environment, args []object.Object) object.Object
+	NativePrintLine func(env *object.Environment, args []object.Object) object.Object
+	NativeInput     func(env *object.Environment, args []object.Object) object.Object
+	NativeInputLine func(env *object.Environment, args []object.Object) object.Object
+	NativeString    func(env *object.Environment, args []object.Object) object.Object
+	NativeExit      func(env *object.Environment, args []object.Object) object.Object
+	NativeEval      func(env *object.Environment, args []object.Object) object.Object
+	NativeInt       func(env *object.Environment, args []object.Object) object.Object
+	NativeFloat     func(env *object.Environment, args []object.Object) object.Object
+	NativeBoolean   func(env *object.Environment, args []object.Object) object.Object
+	NativeFetch     func(env *object.Environment, args []object.Object) object.Object
+	NativeAppend    func(env *object.Environment, args []object.Object) object.Object
+	NativeFirst     func(env *object.Environment, args []object.Object) object.Object
+	NativeLast      func(env *object.Environment, args []object.Object) object.Object
+	NativeType      func(env *object.Environment, args []object.Object) object.Object
+	NativeArray     func(env *object.Environment, args []object.Object) object.Object
 )
 
 var natives map[string]*object.Native
@@ -356,11 +356,11 @@ func isSkip(obj object.Object) bool {
 	return obj.Type() == object.RET || obj.Type() == object.OUT || obj.Type() == object.JUMP
 }
 
-func nativeBoolToBooleanObject(input bool) *object.Boolean {
+func nativeBoolToBooleanObject(input bool) object.Object {
 	if input {
-		return TRUE
+		return True
 	}
-	return FALSE
+	return False
 }
 
 func Eval(node ast.Node, env *object.Environment) object.Object {
@@ -384,9 +384,9 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		params := node.Parameters
 		body := node.Body
 		return &object.Function{Parameters: params, Env: env, Body: body}
-	case *ast.UnderFuncLiteral:
+	case *ast.UnderLineLiteral:
 		body := node.Body
-		return &object.UnderFunc{Env: env, Body: body}
+		return &object.UnderLine{Env: env, Body: body}
 	case *ast.ArrayLiteral:
 		elements := evalExpressions(node.Elements, env, false)
 		if len(elements) == 1 && isError(elements[0]) {
@@ -461,9 +461,13 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 		return &object.OutValue{Value: val}
 	case *ast.JumpStatement:
-		return JUMP
+		return Jump
 	case *ast.LetStatement:
-		val := unwrapReferenceValue(Eval(node.Value, env))
+		val := Void
+		if node.Value != nil {
+			val = unwrapReferenceValue(Eval(node.Value, env))
+		}
+
 		if isError(val) {
 			return val
 		}
@@ -484,7 +488,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 	}
 
-	return VOID
+	return Void
 }
 
 func applyIndex(ident object.Object, indexes []object.Object) object.Object {
@@ -528,7 +532,7 @@ func applyFunction(fn object.Object, args []object.Object, env *object.Environme
 		return unwrapRetValue(evaluated)
 	}
 
-	if function, ok := fn.(*object.UnderFunc); ok {
+	if function, ok := fn.(*object.UnderLine); ok {
 		inner := env.NewEnclosedEnvironment()
 		inner.SetCurrent("args", &object.Array{
 			Elements: args,
@@ -542,7 +546,7 @@ func applyFunction(fn object.Object, args []object.Object, env *object.Environme
 		return native.Fn(env, args)
 	}
 
-	return newError("not a function, underfunc or a native function: %s", fn.Type())
+	return newError("not a function, underline function or a native function: %s", fn.Type())
 }
 
 func extendFunctionEnv(
@@ -553,7 +557,7 @@ func extendFunctionEnv(
 
 	for paramIdx, param := range fn.Parameters {
 		if paramIdx >= len(args) {
-			env.SetCurrent(param.Value, VOID)
+			env.SetCurrent(param.Value, Void)
 		} else {
 			env.SetCurrent(param.Value, args[paramIdx])
 		}
@@ -625,7 +629,7 @@ func evalIdentifier(
 }
 
 func evalProgram(program *ast.Program, env *object.Environment) object.Object {
-	var result object.Object = VOID
+	var result = Void
 
 	for _, statement := range program.Statements {
 		result = Eval(statement, env)
@@ -642,7 +646,7 @@ func evalProgram(program *ast.Program, env *object.Environment) object.Object {
 }
 
 func evalBlockStatement(block *ast.BlockStatement, env *object.Environment) object.Object {
-	var result object.Object = VOID
+	var result = Void
 
 	for _, statement := range block.Statements {
 		result = Eval(statement, env)
@@ -666,14 +670,14 @@ func evalRefStatement(node *ast.RefStatement, env *object.Environment) object.Ob
 		if _, ok := env.SetCurrent(node.Name.Value, refer); !ok {
 			return newError("identifier %s already set", node.Name.Value)
 		}
-		return VOID
+		return Void
 	} else {
 		if ident, ok := node.Value.(*ast.Identifier); ok {
 			if obj, ok := env.Get(ident.Value); ok {
 				if _, ok := env.SetCurrent(node.Name.Value, &object.Reference{Value: obj, Const: false}); !ok {
 					return newError("identifier %s already set", node.Name.Value)
 				}
-				return VOID
+				return Void
 			}
 		}
 	}
@@ -978,7 +982,7 @@ func evalFloatInfixExpression(
 }
 
 func evalBangOperatorExpression(right object.Object) object.Object {
-	return nativeBoolToBooleanObject(toBoolean(right) == FALSE)
+	return nativeBoolToBooleanObject(toBoolean(right) == False)
 }
 
 func evalMinusPrefixOperatorExpression(right object.Object) object.Object {
@@ -1014,12 +1018,12 @@ func evalIfExpression(ie *ast.IfExpression, env *object.Environment) object.Obje
 	} else if ie.Alternative != nil {
 		return Eval(ie.Alternative, env)
 	} else {
-		return VOID
+		return Void
 	}
 }
 
 func evalLoopExpression(le *ast.LoopExpression, env *object.Environment) object.Object {
-	var result object.Object = VOID
+	var result = Void
 
 	condition := unwrapReferenceValue(Eval(le.Condition, env))
 	if isError(condition) {
@@ -1049,25 +1053,25 @@ func evalLoopExpression(le *ast.LoopExpression, env *object.Environment) object.
 }
 
 func isTruthy(obj object.Object) bool {
-	return toBoolean(obj) == TRUE
+	return toBoolean(obj) == True
 }
 
 func toBoolean(number object.Object) object.Object {
 	switch number.Type() {
 	case object.INTEGER:
 		if number.(*object.Integer).Value != 0 {
-			return TRUE
+			return True
 		}
-		return FALSE
+		return False
 	case object.FLOAT:
 		if number.(*object.Float).Value != 0 && !math.IsNaN(number.(*object.Float).Value) {
-			return TRUE
+			return True
 		}
-		return FALSE
+		return False
 	case object.BOOLEAN:
 		return number
 	case object.VOID:
-		return FALSE
+		return False
 	}
 	return newError("could not parse %s as boolean", number.Inspect())
 }

@@ -21,7 +21,7 @@ const (
 	JUMP      = "JUMP"
 	ERR       = "ERR"
 	FUNCTION  = "FUNCTION"
-	UNDERFUNC = "UNDERFUNC"
+	UNDERLINE = "UNDERLINE"
 	NATIVE    = "NATIVE"
 	ARRAY     = "ARRAY"
 	REFERENCE = "REFERENCE"
@@ -148,12 +148,12 @@ func (f *Function) Type() Type       { return FUNCTION }
 func (f *Function) Copy() Object     { return f }
 func (f *Function) LikeFunctionObj() {}
 
-type UnderFunc struct {
+type UnderLine struct {
 	Body *ast.BlockStatement
 	Env  *Environment
 }
 
-func (u *UnderFunc) Inspect() string {
+func (u *UnderLine) Inspect() string {
 	var out bytes.Buffer
 
 	out.WriteString("_")
@@ -161,9 +161,9 @@ func (u *UnderFunc) Inspect() string {
 
 	return out.String()
 }
-func (u *UnderFunc) Type() Type       { return UNDERFUNC }
-func (u *UnderFunc) Copy() Object     { return u }
-func (u *UnderFunc) LikeFunctionObj() {}
+func (u *UnderLine) Type() Type       { return UNDERLINE }
+func (u *UnderLine) Copy() Object     { return u }
+func (u *UnderLine) LikeFunctionObj() {}
 
 type String struct {
 	Value string

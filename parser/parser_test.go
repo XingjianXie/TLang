@@ -281,20 +281,20 @@ func TestParsingPrefixExpressions(t *testing.T) {
 }
 
 func testIntegerLiteral(t *testing.T, il ast.Expression, value int64) bool {
-	integ, ok := il.(*ast.IntegerLiteral)
+	integer, ok := il.(*ast.IntegerLiteral)
 	if !ok {
 		t.Errorf("il not *ast.IntegerLiteral. got=%T", il)
 		return false
 	}
 
-	if integ.Value != value {
-		t.Errorf("integ.Value not %d. got=%d", value, integ.Value)
+	if integer.Value != value {
+		t.Errorf("integer.Value not %d. got=%d", value, integer.Value)
 		return false
 	}
 
-	if integ.TokenLiteral() != fmt.Sprintf("%d", value) {
-		t.Errorf("integ.TokenLiteral not %d. got=%s", value,
-			integ.TokenLiteral())
+	if integer.TokenLiteral() != fmt.Sprintf("%d", value) {
+		t.Errorf("integer.TokenLiteral not %d. got=%s", value,
+			integer.TokenLiteral())
 		return false
 	}
 
@@ -302,20 +302,20 @@ func testIntegerLiteral(t *testing.T, il ast.Expression, value int64) bool {
 }
 
 func testFloatLiteral(t *testing.T, il ast.Expression, value float64) bool {
-	floa, ok := il.(*ast.FloatLiteral)
+	float, ok := il.(*ast.FloatLiteral)
 	if !ok {
 		t.Errorf("il not *ast.IntegerLiteral. got=%T", il)
 		return false
 	}
 
-	if floa.Value != value {
-		t.Errorf("integ.Value not %g. got=%g", value, floa.Value)
+	if float.Value != value {
+		t.Errorf("float.Value not %g. got=%g", value, float.Value)
 		return false
 	}
 
-	if floa.TokenLiteral() != fmt.Sprintf("%g", value) {
-		t.Errorf("integ.TokenLiteral not %g. got=%s", value,
-			floa.TokenLiteral())
+	if float.TokenLiteral() != fmt.Sprintf("%g", value) {
+		t.Errorf("float.TokenLiteral not %g. got=%s", value,
+			float.TokenLiteral())
 		return false
 	}
 

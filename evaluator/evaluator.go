@@ -13,10 +13,10 @@ import (
 )
 
 var (
-	True  object.Object = &object.Boolean{Value: true}
-	False object.Object = &object.Boolean{Value: false}
-	Void  object.Object = &object.Void{}
-	Jump  object.Object = &object.Jump{}
+	True  = &object.Boolean{Value: true}
+	False = &object.Boolean{Value: false}
+	Void  = &object.Void{}
+	Jump  = &object.Jump{}
 )
 
 func PrintParserErrors(out io.Writer, errors []string) {
@@ -393,6 +393,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			return elements[0]
 		}
 		return &object.Array{Elements: elements, Copyable: false}
+	case *ast.HashLiteral:
+		return evalHashLiteral(node, env)
 
 	case *ast.PrefixExpression:
 		right := unwrapReferenceValue(Eval(node.Right, env))
@@ -463,7 +465,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.JumpStatement:
 		return Jump
 	case *ast.LetStatement:
-		val := Void
+		var val object.Object = Void
 		if node.Value != nil {
 			val = unwrapReferenceValue(Eval(node.Value, env))
 		}
@@ -522,7 +524,23 @@ func applyIndex(ident object.Object, indexes []object.Object) object.Object {
 		}
 		return &object.Character{Value: runeStr[index]}
 	}
-	return newError("not a array: %s", ident.Type())
+	if hash, ok := ident.(*object.Hash); ok {
+		if len(indexes) != 1 {
+			return newError("string: len(indexes) should be 1")
+		}
+
+		key, ok := indexes[0].(object.HashAble)
+		if !ok {
+			return newError("unusable as hash key: %s", indexes[0].Type())
+		}
+		pair, ok := hash.Pairs[key.HashKey()]
+		if !ok {
+			return Void
+		}
+
+		return pair.Value
+	}
+	return newError("not Array, String or Hash: %s", ident.Type())
 }
 
 func applyFunction(fn object.Object, args []object.Object, env *object.Environment) object.Object {
@@ -628,8 +646,37 @@ func evalIdentifier(
 	return newError("identifier not found: " + node.Value)
 }
 
+func evalHashLiteral(
+	node *ast.HashLiteral,
+	env *object.Environment,
+) object.Object {
+	pairs := make(map[object.HashKey]object.HashPair)
+
+	for keyNode, valueNode := range node.Pairs {
+		key := Eval(keyNode, env)
+		if isError(key) {
+			return key
+		}
+
+		hashKey, ok := key.(object.HashAble)
+		if !ok {
+			return newError("unusable as hash key: %s", key.Type())
+		}
+
+		value := Eval(valueNode, env)
+		if isError(value) {
+			return value
+		}
+
+		hashed := hashKey.HashKey()
+		pairs[hashed] = object.HashPair{Key: key, Value: value}
+	}
+
+	return &object.Hash{Pairs: pairs}
+}
+
 func evalProgram(program *ast.Program, env *object.Environment) object.Object {
-	var result = Void
+	var result object.Object = Void
 
 	for _, statement := range program.Statements {
 		result = Eval(statement, env)
@@ -646,7 +693,7 @@ func evalProgram(program *ast.Program, env *object.Environment) object.Object {
 }
 
 func evalBlockStatement(block *ast.BlockStatement, env *object.Environment) object.Object {
-	var result = Void
+	var result object.Object = Void
 
 	for _, statement := range block.Statements {
 		result = Eval(statement, env)
@@ -1023,7 +1070,7 @@ func evalIfExpression(ie *ast.IfExpression, env *object.Environment) object.Obje
 }
 
 func evalLoopExpression(le *ast.LoopExpression, env *object.Environment) object.Object {
-	var result = Void
+	var result object.Object = Void
 
 	condition := unwrapReferenceValue(Eval(le.Condition, env))
 	if isError(condition) {

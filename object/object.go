@@ -25,6 +25,7 @@ const (
 	NATIVE    = "NATIVE"
 	ARRAY     = "ARRAY"
 	REFERENCE = "REFERENCE"
+	HASH      = "HASH"
 )
 
 type Object interface {
@@ -48,6 +49,16 @@ type LikeFunction interface {
 	LikeFunctionObj()
 }
 
+type HashAble interface {
+	Object
+	HashKey() HashKey
+}
+
+type HashKey struct {
+	Type  Type
+	Value interface{}
+}
+
 type Integer struct {
 	Value int64
 }
@@ -56,6 +67,9 @@ func (i *Integer) Inspect() string { return fmt.Sprintf("%d", i.Value) }
 func (i *Integer) Type() Type      { return INTEGER }
 func (i *Integer) Copy() Object    { return i }
 func (i *Integer) NumberObj()      {}
+func (i *Integer) HashKey() HashKey {
+	return HashKey{Type: i.Type(), Value: i.Value}
+}
 
 type Float struct {
 	Value float64
@@ -73,12 +87,18 @@ type Boolean struct {
 func (b *Boolean) Inspect() string { return fmt.Sprintf("%t", b.Value) }
 func (b *Boolean) Type() Type      { return BOOLEAN }
 func (b *Boolean) Copy() Object    { return b }
+func (b *Boolean) HashKey() HashKey {
+	return HashKey{Type: b.Type(), Value: b.Value}
+}
 
 type Void struct{}
 
 func (v *Void) Inspect() string { return "void" }
 func (v *Void) Type() Type      { return VOID }
 func (v *Void) Copy() Object    { return v }
+func (v *Void) HashAble() HashKey {
+	return HashKey{Type: v.Type(), Value: 0}
+}
 
 type RetValue struct {
 	Value Object
@@ -173,6 +193,9 @@ func (s *String) Inspect() string   { return "\"" + s.Value + "\"" }
 func (s *String) Type() Type        { return STRING }
 func (s *String) Copy() Object      { return s }
 func (s *String) LetterObj() string { return s.Value }
+func (s *String) HashKey() HashKey {
+	return HashKey{Type: s.Type(), Value: s.Value}
+}
 
 type Character struct {
 	Value rune
@@ -182,6 +205,9 @@ func (c *Character) Inspect() string   { return "'" + string(c.Value) + "'" }
 func (c *Character) Type() Type        { return CHARACTER }
 func (c *Character) Copy() Object      { return c }
 func (c *Character) LetterObj() string { return string(c.Value) }
+func (c *Character) HashKey() HashKey {
+	return HashKey{Type: c.Type(), Value: c.Value}
+}
 
 type Native struct {
 	Fn func(env *Environment, args []Object) Object
@@ -244,4 +270,49 @@ func (r *Reference) Type() Type { return REFERENCE }
 func (r *Reference) Copy() Object {
 	println("WARNING: COPY REFERENCE")
 	return (*r.Value).Copy()
+}
+
+type HashPair struct {
+	Key   Object
+	Value Object
+}
+
+type Hash struct {
+	Pairs    map[HashKey]HashPair
+	Copyable bool
+}
+
+func (h *Hash) Inspect() string {
+	var out bytes.Buffer
+
+	var pairs []string
+	for _, pair := range h.Pairs {
+		pairs = append(pairs, fmt.Sprintf("%s: %s",
+			pair.Key.Inspect(), pair.Value.Inspect()))
+	}
+
+	out.WriteString("{")
+	out.WriteString(strings.Join(pairs, ", "))
+	out.WriteString("}")
+
+	return out.String()
+}
+func (h *Hash) Type() Type { return HASH }
+func (h *Hash) Copy() Object {
+	if h.Copyable {
+		h.Copyable = false
+		return h
+	}
+	pairs := make(map[HashKey]HashPair)
+	for index, pair := range h.Pairs {
+		pairs[index] = HashPair{
+			Key:   pair.Key,
+			Value: pair.Value.Copy(),
+		}
+	}
+
+	return &Hash{
+		Pairs:    pairs,
+		Copyable: false,
+	}
 }

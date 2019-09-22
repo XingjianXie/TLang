@@ -150,6 +150,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(token.Void, p.parseVoidLiteral)
 	p.registerPrefix(token.Lparen, p.parseGroupedExpression)
 	p.registerPrefix(token.Lbracket, p.parseArrayLiteral)
+	p.registerPrefix(token.Lbrace, p.parseHashLiteral)
 	p.registerPrefix(token.If, p.parseIfExpression)
 	p.registerPrefix(token.Loop, p.parseLoopExpression)
 	p.registerPrefix(token.Function, p.parseFunctionLiteral)
@@ -232,6 +233,7 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 	stmt.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
 
 	if p.peekTokenIs(token.Semicolon) {
+		p.nextToken()
 		return stmt
 	}
 
@@ -430,6 +432,35 @@ func (p *Parser) parseArrayLiteral() ast.Expression {
 	exp := &ast.ArrayLiteral{Token: p.curToken}
 	exp.Elements = p.parseExpressionList(token.Rbracket)
 	return exp
+}
+
+func (p *Parser) parseHashLiteral() ast.Expression {
+	hash := &ast.HashLiteral{Token: p.curToken}
+	hash.Pairs = make(map[ast.Expression]ast.Expression)
+
+	for !p.peekTokenIs(token.Rbrace) {
+		p.nextToken()
+		key := p.parseExpression(Lowest)
+
+		if !p.expectPeek(token.Colon) {
+			return nil
+		}
+
+		p.nextToken()
+		value := p.parseExpression(Lowest)
+
+		hash.Pairs[key] = value
+
+		if !p.peekTokenIs(token.Rbrace) && !p.expectPeek(token.Comma) {
+			return nil
+		}
+	}
+
+	if !p.expectPeek(token.Rbrace) {
+		return nil
+	}
+
+	return hash
 }
 
 func (p *Parser) parsePrefixExpression() ast.Expression {

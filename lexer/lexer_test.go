@@ -26,6 +26,7 @@ void
 true
 [][]
 _
+:
 `
 
 	tests := []struct {
@@ -89,6 +90,8 @@ _
 		{token.Rbracket, "]"},
 
 		{token.Underline, "_"},
+
+		{token.Colon, ":"},
 
 		{token.Eof, ""},
 	}

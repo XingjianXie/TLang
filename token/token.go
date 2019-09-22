@@ -71,6 +71,7 @@ const (
 	// Delimiters
 	Comma     = ","
 	Semicolon = ";"
+	Colon     = ":"
 
 	Lparen   = "("
 	Rparen   = ")"

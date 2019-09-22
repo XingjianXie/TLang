@@ -25,6 +25,7 @@ func TestNextToken(t *testing.T) {
 void
 true
 [][]
+_
 `
 
 	tests := []struct {
@@ -86,6 +87,8 @@ true
 		{token.RBRACKET, "]"},
 		{token.LBRACKET, "["},
 		{token.RBRACKET, "]"},
+
+		{token.UNDERLINE, "_"},
 
 		{token.EOF, ""},
 	}

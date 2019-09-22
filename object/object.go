@@ -21,6 +21,7 @@ const (
 	JUMP      = "JUMP"
 	ERR       = "ERR"
 	FUNCTION  = "FUNCTION"
+	UNDERFUNC = "UNDERFUNC"
 	NATIVE    = "NATIVE"
 	ARRAY     = "ARRAY"
 	REFERENCE = "REFERENCE"
@@ -33,11 +34,18 @@ type Object interface {
 }
 
 type Number interface {
+	Object
 	NumberObj()
 }
 
 type Letter interface {
+	Object
 	LetterObj() string
+}
+
+type LikeFunction interface {
+	Object
+	LikeFunctionObj()
 }
 
 type Integer struct {
@@ -136,8 +144,26 @@ func (f *Function) Inspect() string {
 
 	return out.String()
 }
-func (f *Function) Type() Type   { return FUNCTION }
-func (f *Function) Copy() Object { return f }
+func (f *Function) Type() Type       { return FUNCTION }
+func (f *Function) Copy() Object     { return f }
+func (f *Function) LikeFunctionObj() {}
+
+type UnderFunc struct {
+	Body *ast.BlockStatement
+	Env  *Environment
+}
+
+func (u *UnderFunc) Inspect() string {
+	var out bytes.Buffer
+
+	out.WriteString("_")
+	out.WriteString(u.Body.String())
+
+	return out.String()
+}
+func (u *UnderFunc) Type() Type       { return UNDERFUNC }
+func (u *UnderFunc) Copy() Object     { return u }
+func (u *UnderFunc) LikeFunctionObj() {}
 
 type String struct {
 	Value string
@@ -161,9 +187,10 @@ type Native struct {
 	Fn func(env *Environment, args []Object) Object
 }
 
-func (n *Native) Inspect() string { return "func [Native]" }
-func (n *Native) Type() Type      { return NATIVE }
-func (n *Native) Copy() Object    { return n }
+func (n *Native) Inspect() string  { return "func [Native]" }
+func (n *Native) Type() Type       { return NATIVE }
+func (n *Native) Copy() Object     { return n }
+func (n *Native) LikeFunctionObj() {}
 
 type Array struct {
 	Elements []Object
@@ -199,11 +226,15 @@ func (a *Array) Copy() Object {
 
 type Reference struct {
 	Value *Object
+	Const bool
 }
 
 func (r *Reference) Inspect() string {
 	var out bytes.Buffer
 
+	if r.Const {
+		out.WriteString("Const ")
+	}
 	out.WriteString("Reference: ")
 	out.WriteString((*r.Value).Inspect())
 

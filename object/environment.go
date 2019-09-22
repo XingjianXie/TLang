@@ -1,8 +1,8 @@
 package object
 
-func NewEnclosedEnvironment(outer *Environment) *Environment {
+func (e *Environment) NewEnclosedEnvironment() *Environment {
 	env := NewEnvironment()
-	env.outer = outer
+	env.outer = e
 	return env
 }
 
@@ -34,9 +34,12 @@ func (e *Environment) SetCurrent(name string, val Object) (*Object, bool) {
 }
 
 func (e *Environment) SetAvailable(name string, val Object) (*Object, bool) {
-	_, ok := e.store[name]
+	obj, ok := e.store[name]
 	if ok {
-		*e.store[name] = val
+		if _, ok := (*obj).(*Reference); ok {
+			return nil, false
+		}
+		*obj = val
 		return &val, ok
 	}
 	if e.outer != nil {

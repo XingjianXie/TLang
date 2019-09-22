@@ -193,7 +193,7 @@ func init() {
 		if len(args) != 1 {
 			return newError("native function float: len(args) should be 1")
 		}
-		return booleanify(unwrapReferenceValue(args[0]))
+		return toBoolean(unwrapReferenceValue(args[0]))
 	}
 
 	FETCH = func(env *object.Environment, args []object.Object) object.Object {
@@ -224,7 +224,7 @@ func init() {
 			if len(array.Elements) == 0 {
 				return VOID
 			}
-			return &object.Reference{Value: &array.Elements[0]}
+			return &object.Reference{Value: &array.Elements[0], Const: false}
 		}
 		return newError("native function first: arg should be Array")
 	}
@@ -237,7 +237,7 @@ func init() {
 			if len(array.Elements) == 0 {
 				return VOID
 			}
-			return &object.Reference{Value: &array.Elements[len(array.Elements)-1]}
+			return &object.Reference{Value: &array.Elements[len(array.Elements)-1], Const: false}
 		}
 		return newError("native function append: arg should be Array")
 	}
@@ -278,11 +278,14 @@ func init() {
 			return newError("native function array: args[0] should be Integer")
 		} else if len(args) == 3 {
 			if length, ok := unwrapReferenceValue(args[0]).(*object.Integer); ok {
-				if function, ok := unwrapReferenceValue(args[2]).(*object.Function); ok {
+				if function, ok := unwrapReferenceValue(args[2]).(object.LikeFunction); ok {
 					var eles []object.Object
 					ele := unwrapReferenceValue(args[1])
 					for i := int64(0); i < length.Value; i++ {
 						ele = applyFunction(function, []object.Object{&object.Integer{Value: i}, ele}, env)
+						if isError(ele) {
+							return ele
+						}
 						eles = append(eles, ele)
 					}
 
@@ -381,6 +384,9 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		params := node.Parameters
 		body := node.Body
 		return &object.Function{Parameters: params, Env: env, Body: body}
+	case *ast.UnderFuncLiteral:
+		body := node.Body
+		return &object.UnderFunc{Env: env, Body: body}
 	case *ast.ArrayLiteral:
 		elements := evalExpressions(node.Elements, env, false)
 		if len(elements) == 1 && isError(elements[0]) {
@@ -495,7 +501,7 @@ func applyIndex(ident object.Object, indexes []object.Object) object.Object {
 			return newError("array: out of range")
 		}
 		refObj := &arr.Elements[index]
-		return &object.Reference{Value: refObj}
+		return &object.Reference{Value: refObj, Const: false}
 	}
 	if str, ok := ident.(*object.String); ok {
 		runeStr := []rune(str.Value)
@@ -522,18 +528,28 @@ func applyFunction(fn object.Object, args []object.Object, env *object.Environme
 		return unwrapRetValue(evaluated)
 	}
 
+	if function, ok := fn.(*object.UnderFunc); ok {
+		inner := env.NewEnclosedEnvironment()
+		inner.SetCurrent("args", &object.Array{
+			Elements: args,
+			Copyable: false,
+		})
+		evaluated := Eval(function.Body, inner)
+		return unwrapRetValue(evaluated)
+	}
+
 	if native, ok := fn.(*object.Native); ok {
 		return native.Fn(env, args)
 	}
 
-	return newError("not a function or a native function: %s", fn.Type())
+	return newError("not a function, underfunc or a native function: %s", fn.Type())
 }
 
 func extendFunctionEnv(
 	fn *object.Function,
 	args []object.Object,
 ) *object.Environment {
-	env := object.NewEnclosedEnvironment(fn.Env)
+	env := fn.Env.NewEnclosedEnvironment()
 
 	for paramIdx, param := range fn.Parameters {
 		if paramIdx >= len(args) {
@@ -654,7 +670,7 @@ func evalRefStatement(node *ast.RefStatement, env *object.Environment) object.Ob
 	} else {
 		if ident, ok := node.Value.(*ast.Identifier); ok {
 			if obj, ok := env.Get(ident.Value); ok {
-				if _, ok := env.SetCurrent(node.Name.Value, &object.Reference{Value: obj}); !ok {
+				if _, ok := env.SetCurrent(node.Name.Value, &object.Reference{Value: obj, Const: false}); !ok {
 					return newError("identifier %s already set", node.Name.Value)
 				}
 				return VOID
@@ -685,6 +701,9 @@ func evalAssignExpression(node *ast.AssignExpression, env *object.Environment) o
 
 	left := Eval(node.Left, env)
 	if refer, ok := left.(*object.Reference); ok {
+		if refer.Const {
+			return newError("assign to const reference")
+		}
 		var newVal object.Object
 		switch node.Operator {
 		case "+=":
@@ -959,7 +978,7 @@ func evalFloatInfixExpression(
 }
 
 func evalBangOperatorExpression(right object.Object) object.Object {
-	return nativeBoolToBooleanObject(booleanify(right) == FALSE)
+	return nativeBoolToBooleanObject(toBoolean(right) == FALSE)
 }
 
 func evalMinusPrefixOperatorExpression(right object.Object) object.Object {
@@ -1008,7 +1027,7 @@ func evalLoopExpression(le *ast.LoopExpression, env *object.Environment) object.
 	}
 
 	for isTruthy(condition) {
-		newResult := Eval(le.Body, object.NewEnclosedEnvironment(env))
+		newResult := Eval(le.Body, env.NewEnclosedEnvironment())
 		if isError(newResult) || newResult.Type() == object.RET {
 			return newResult
 		}
@@ -1030,10 +1049,10 @@ func evalLoopExpression(le *ast.LoopExpression, env *object.Environment) object.
 }
 
 func isTruthy(obj object.Object) bool {
-	return booleanify(obj) == TRUE
+	return toBoolean(obj) == TRUE
 }
 
-func booleanify(number object.Object) object.Object {
+func toBoolean(number object.Object) object.Object {
 	switch number.Type() {
 	case object.INTEGER:
 		if number.(*object.Integer).Value != 0 {

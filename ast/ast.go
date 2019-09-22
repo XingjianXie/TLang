@@ -373,6 +373,22 @@ func (fl *FunctionLiteral) String() string {
 	return out.String()
 }
 
+type UnderFuncLiteral struct {
+	Token token.Token // The '_' token
+	Body  *BlockStatement
+}
+
+func (ul *UnderFuncLiteral) expressionNode()      {}
+func (ul *UnderFuncLiteral) TokenLiteral() string { return ul.Token.Literal }
+func (ul *UnderFuncLiteral) String() string {
+	var out bytes.Buffer
+
+	out.WriteString(ul.TokenLiteral())
+	out.WriteString(ul.Body.String())
+
+	return out.String()
+}
+
 type CallExpression struct {
 	Token     token.Token // The '(' token
 	Function  Expression  // Identifier or FunctionLiteral

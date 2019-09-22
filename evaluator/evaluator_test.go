@@ -366,6 +366,7 @@ func TestFunctionApplication(t *testing.T) {
 		{"let add = func(x, y) { x + y; }; add(5, 5);", 10},
 		{"let add = func(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20},
 		{"func(x) { x; }(5);", 5},
+		{"_ { args[0]; }(5);", 5},
 		{"let t = func(x) { x + 1; }; t(t(t(1)));", 4},
 	}
 

@@ -308,6 +308,13 @@ func init() {
 		return newError("native function array: len(args) should be 1, 2 or 3")
 	}
 
+	NativeValue = func(env *object.Environment, args []object.Object) object.Object {
+		if len(args) != 1 {
+			return newError("native function array: len(args) should be 1")
+		}
+		return unwrapReferenceValue(args[0])
+	}
+
 	natives = map[string]*object.Native{
 		"len":       {NativeLen},
 		"print":     {NativePrint},
@@ -326,6 +333,7 @@ func init() {
 		"last":      {NativeLast},
 		"type":      {NativeType},
 		"array":     {NativeArray},
+		"value":     {NativeValue},
 	}
 }
 
@@ -347,6 +355,7 @@ var (
 	NativeLast      func(env *object.Environment, args []object.Object) object.Object
 	NativeType      func(env *object.Environment, args []object.Object) object.Object
 	NativeArray     func(env *object.Environment, args []object.Object) object.Object
+	NativeValue     func(env *object.Environment, args []object.Object) object.Object
 )
 
 var natives map[string]*object.Native

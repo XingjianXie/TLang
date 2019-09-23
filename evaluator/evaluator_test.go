@@ -573,6 +573,8 @@ func TestReference(t *testing.T) {
 
 		{"let x = 3; _{ args[0] = 4; }(x); x;", 4},
 		{"let x = 3; _{ args[0] + args[1] + args[2]; }(x, x, 5);", 11},
+		{"let x = 0; func(a) { a = 3; } (x); x;", 3},
+		{"let x = 0; func(a, b) { a = 3 + b; } (x, 5); x;", 8},
 	}
 
 	for _, tt := range tests {

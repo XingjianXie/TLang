@@ -601,7 +601,6 @@ func extendFunctionEnv(
 		if paramIdx >= len(args) {
 			env.SetCurrent(param.Value, &object.Reference{Value: &Void, Const: true})
 		} else {
-			env.SetCurrent(param.Value, args[paramIdx])
 			if refer, ok := args[paramIdx].(*object.Reference); ok {
 				env.SetCurrent(param.Value, refer)
 			} else {

@@ -13,10 +13,10 @@ import (
 )
 
 var (
-	True  = &object.Boolean{Value: true}
-	False = &object.Boolean{Value: false}
-	Void  = &object.Void{}
-	Jump  = &object.Jump{}
+	True  object.Object = &object.Boolean{Value: true}
+	False object.Object = &object.Boolean{Value: false}
+	Void  object.Object = &object.Void{}
+	Jump  object.Object = &object.Jump{}
 )
 
 func PrintParserErrors(out io.Writer, errors []string) {
@@ -289,7 +289,7 @@ func init() {
 					var elem []object.Object
 					e := unwrapReferenceValue(args[1])
 					for i := int64(0); i < length.Value; i++ {
-						e = applyFunction(function, []object.Object{&object.Integer{Value: i}, e}, env)
+						e = unwrapReferenceValue(applyFunction(function, []object.Object{&object.Integer{Value: i}, e}, env))
 						if isError(e) {
 							return e
 						}
@@ -434,10 +434,9 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 		args := evalExpressions(node.Arguments, env, false)
 		if len(args) == 1 && isError(args[0]) {
-			if function == natives["fetch"] {
-				return applyFunction(function, args, env)
+			if function != natives["fetch"] {
+				return args[0]
 			}
-			return args[0]
 		}
 
 		return applyFunction(function, args, env)
@@ -472,7 +471,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.JumpStatement:
 		return Jump
 	case *ast.LetStatement:
-		var val object.Object = Void
+		val := Void
 		if node.Value != nil {
 			val = unwrapReferenceValue(Eval(node.Value, env))
 		}
@@ -520,6 +519,9 @@ func applyIndex(ident object.Object, indexes []object.Object) object.Object {
 			return newError("array: out of range")
 		}
 		refObj := &arr.Elements[index]
+		if refer, ok := (*refObj).(*object.Reference); ok {
+			return refer
+		}
 		return &object.Reference{Value: refObj, Const: constObj}
 	}
 	if str, ok := ident.(*object.String); ok {
@@ -565,8 +567,17 @@ func applyFunction(fn object.Object, args []object.Object, env *object.Environme
 
 	if function, ok := fn.(*object.UnderLine); ok {
 		inner := env.NewEnclosedEnvironment()
+		var argsRef []object.Object
+		for _, arg := range args {
+			if refer, ok := arg.(*object.Reference); ok {
+				argsRef = append(argsRef, refer)
+			} else {
+				arr := arg
+				argsRef = append(argsRef, &object.Reference{Value: &arr, Const: true})
+			}
+		}
 		inner.SetCurrent("args", &object.Array{
-			Elements: args,
+			Elements: argsRef,
 			Copyable: false,
 		})
 		evaluated := Eval(function.Body, inner)
@@ -588,9 +599,14 @@ func extendFunctionEnv(
 
 	for paramIdx, param := range fn.Parameters {
 		if paramIdx >= len(args) {
-			env.SetCurrent(param.Value, Void)
+			env.SetCurrent(param.Value, &object.Reference{Value: &Void, Const: true})
 		} else {
 			env.SetCurrent(param.Value, args[paramIdx])
+			if refer, ok := args[paramIdx].(*object.Reference); ok {
+				env.SetCurrent(param.Value, refer)
+			} else {
+				env.SetCurrent(param.Value, &object.Reference{Value: &args[paramIdx], Const: true})
+			}
 		}
 	}
 
@@ -695,7 +711,7 @@ func evalHashLiteral(
 }
 
 func evalProgram(program *ast.Program, env *object.Environment) object.Object {
-	var result object.Object = Void
+	result := Void
 
 	for _, statement := range program.Statements {
 		result = Eval(statement, env)
@@ -712,7 +728,7 @@ func evalProgram(program *ast.Program, env *object.Environment) object.Object {
 }
 
 func evalBlockStatement(block *ast.BlockStatement, env *object.Environment) object.Object {
-	var result object.Object = Void
+	result := Void
 
 	for _, statement := range block.Statements {
 		result = Eval(statement, env)
@@ -736,16 +752,14 @@ func evalRefStatement(node *ast.RefStatement, env *object.Environment) object.Ob
 		}
 		return Void
 	} else {
-		if ident, ok := node.Value.(*ast.Identifier); ok {
-			if obj, ok := env.Get(ident.Value); ok {
-				if _, ok := env.SetCurrent(node.Name.Value, &object.Reference{Value: obj, Const: false}); !ok {
-					return newError("identifier %s already set", node.Name.Value)
-				}
-				return Void
-			}
+		if _, ok := node.Value.(*ast.Identifier); ok {
+			return newError("left value is a identifier")
 		}
+		if _, ok := env.SetCurrent(node.Name.Value, &object.Reference{Value: &left, Const: true}); !ok {
+			return newError("identifier %s already set", node.Name.Value)
+		}
+		return Void
 	}
-	return newError("left value not a reference: " + node.Value.String())
 }
 
 func evalPrefixExpression(operator string, right object.Object) object.Object {
@@ -1067,7 +1081,7 @@ func evalIfExpression(ie *ast.IfExpression, env *object.Environment) object.Obje
 }
 
 func evalLoopExpression(le *ast.LoopExpression, env *object.Environment) object.Object {
-	var result object.Object = Void
+	result := Void
 
 	condition := unwrapReferenceValue(Eval(le.Condition, env))
 	if isError(condition) {

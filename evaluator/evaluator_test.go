@@ -366,7 +366,7 @@ func TestFunctionApplication(t *testing.T) {
 		{"let add = func(x, y) { x + y; }; add(5, 5);", 10},
 		{"let add = func(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20},
 		{"func(x) { x; }(5);", 5},
-		{"_ { args[0]; }(5);", 5},
+		{"_ { let t = args[0]; t; }(5);", 5},
 		{"let t = func(x) { x + 1; }; t(t(t(1)));", 4},
 	}
 
@@ -570,6 +570,9 @@ func TestReference(t *testing.T) {
 		{"let a = 0; a = [1,2,3,4]; ref b = a[1+2-1]; a[2] = 5; b;", 5},
 
 		{"let a = [1,2,3,4,[1,2,3]]; ref b = a[4]; b[0] = 2; a[4][0];", 2},
+
+		{"let x = 3; _{ args[0] = 4; }(x); x;", 4},
+		{"let x = 3; _{ args[0] + args[1] + args[2]; }(x, x, 5);", 11},
 	}
 
 	for _, tt := range tests {
@@ -599,8 +602,8 @@ func TestHashLiterals(t *testing.T) {
 		(&object.String{Value: "two"}).HashKey():   2,
 		(&object.String{Value: "three"}).HashKey(): 8,
 		(&object.Integer{Value: 4}).HashKey():      4,
-		True.HashKey():                             5,
-		False.HashKey():                            6,
+		True.(*object.Boolean).HashKey():           5,
+		False.(*object.Boolean).HashKey():          6,
 	}
 
 	if len(result.Pairs) != len(expected) {

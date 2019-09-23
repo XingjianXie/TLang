@@ -246,6 +246,13 @@ func init() {
 		if len(args) != 1 {
 			return newError("native function type: len(args) should be 1")
 		}
+		if refer, ok := args[0].(*object.Reference); ok {
+			isConst := ""
+			if refer.Const {
+				isConst = "CONST "
+			}
+			return &object.String{Value: isConst + "REFERENCE: " + string((*refer.Value).Type())}
+		}
 		return &object.String{Value: string(args[0].Type())}
 	}
 
@@ -388,7 +395,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		body := node.Body
 		return &object.UnderLine{Env: env, Body: body}
 	case *ast.ArrayLiteral:
-		elements := evalExpressions(node.Elements, env, false)
+		elements := evalExpressions(node.Elements, env, true)
 		if len(elements) == 1 && isError(elements[0]) {
 			return elements[0]
 		}
@@ -435,7 +442,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 
 		return applyFunction(function, args, env)
 	case *ast.IndexExpression:
-		ident := unwrapReferenceValue(Eval(node.Left, env))
+		ident := Eval(node.Left, env)
 		if isError(ident) {
 			return ident
 		}
@@ -494,6 +501,12 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 }
 
 func applyIndex(ident object.Object, indexes []object.Object) object.Object {
+	constObj := true
+	if refer, ok := ident.(*object.Reference); ok {
+		constObj = refer.Const
+		ident = unwrapReferenceValue(ident)
+	}
+
 	if arr, ok := ident.(*object.Array); ok {
 		if len(indexes) != 1 {
 			return newError("array: len(indexes) should be 1")
@@ -507,7 +520,7 @@ func applyIndex(ident object.Object, indexes []object.Object) object.Object {
 			return newError("array: out of range")
 		}
 		refObj := &arr.Elements[index]
-		return &object.Reference{Value: refObj, Const: false}
+		return &object.Reference{Value: refObj, Const: constObj}
 	}
 	if str, ok := ident.(*object.String); ok {
 		runeStr := []rune(str.Value)
@@ -636,7 +649,13 @@ func evalIdentifier(
 	env *object.Environment,
 ) object.Object {
 	if val, ok := env.Get(node.Value); ok {
-		return *val
+		if refer, ok := (*val).(*object.Reference); ok {
+			return refer
+		}
+		return &object.Reference{
+			Value: val,
+			Const: false,
+		}
 	}
 
 	if native, ok := natives[node.Value]; ok {
@@ -653,7 +672,7 @@ func evalHashLiteral(
 	pairs := make(map[object.HashKey]object.HashPair)
 
 	for keyNode, valueNode := range node.Pairs {
-		key := Eval(keyNode, env)
+		key := unwrapReferenceValue(Eval(keyNode, env))
 		if isError(key) {
 			return key
 		}
@@ -707,12 +726,10 @@ func evalBlockStatement(block *ast.BlockStatement, env *object.Environment) obje
 }
 
 func evalRefStatement(node *ast.RefStatement, env *object.Environment) object.Object {
-	val := unwrapReferenceValue(Eval(node.Value, env))
-	if isError(val) {
-		return val
-	}
-
 	left := Eval(node.Value, env)
+	if isError(left) {
+		return left
+	}
 	if refer, ok := left.(*object.Reference); ok {
 		if _, ok := env.SetCurrent(node.Name.Value, refer); !ok {
 			return newError("identifier %s already set", node.Name.Value)
@@ -728,7 +745,7 @@ func evalRefStatement(node *ast.RefStatement, env *object.Environment) object.Ob
 			}
 		}
 	}
-	return newError("left value not a identifier or a reference: " + node.Value.String())
+	return newError("left value not a reference: " + node.Value.String())
 }
 
 func evalPrefixExpression(operator string, right object.Object) object.Object {
@@ -776,28 +793,8 @@ func evalAssignExpression(node *ast.AssignExpression, env *object.Environment) o
 		*refer.Value = newVal
 		return newVal
 	} else {
-		if ident, ok := node.Left.(*ast.Identifier); ok {
-			var newVal object.Object
-			switch node.Operator {
-			case "+=":
-				newVal = evalInfixExpression("+", evalIdentifier(ident, env), val)
-			case "-=":
-				newVal = evalInfixExpression("-", evalIdentifier(ident, env), val)
-			case "*=":
-				newVal = evalInfixExpression("*", evalIdentifier(ident, env), val)
-			case "/=":
-				newVal = evalInfixExpression("/", evalIdentifier(ident, env), val)
-			case "%=":
-				newVal = evalInfixExpression("%", evalIdentifier(ident, env), val)
-			case "=":
-				newVal = val.Copy()
-			}
-			if isError(newVal) {
-				return newVal
-			}
-			if _, ok := env.SetAvailable(ident.Value, newVal); ok {
-				return newVal
-			}
+		if _, ok := node.Left.(*ast.Identifier); ok {
+			return newError("left value is a identifier")
 		}
 	}
 	return newError("left value not a identifier or a reference: " + node.Left.String())

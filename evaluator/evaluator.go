@@ -319,6 +319,13 @@ func init() {
 		return unwrapReferenceValue(args[0])
 	}
 
+	NativeEcho = func(env *object.Environment, args []object.Object) object.Object {
+		if len(args) != 1 {
+			return newError("native function array: len(args) should be 1")
+		}
+		return args[0]
+	}
+
 	natives = map[string]*object.Native{
 		"len":       {NativeLen},
 		"print":     {NativePrint},
@@ -338,6 +345,7 @@ func init() {
 		"type":      {NativeType},
 		"array":     {NativeArray},
 		"value":     {NativeValue},
+		"echo":      {NativeEcho},
 	}
 }
 
@@ -360,6 +368,7 @@ var (
 	NativeType      func(env *object.Environment, args []object.Object) object.Object
 	NativeArray     func(env *object.Environment, args []object.Object) object.Object
 	NativeValue     func(env *object.Environment, args []object.Object) object.Object
+	NativeEcho      func(env *object.Environment, args []object.Object) object.Object
 )
 
 var natives map[string]*object.Native
@@ -500,13 +509,25 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.DelStatement:
 		if ident, ok := node.DelIdent.(*ast.Identifier); ok {
 			if _, ok := env.Get(ident.Value); ok {
-				//TODO: DELETE REFERENCE
-				env.DeAlloc(&object.String{Value: ident.Value})
+				if !env.DeAlloc(&object.String{Value: ident.Value}) {
+					return newError("unable to dealloc: %s", node.DelIdent.String())
+				}
 			} else {
-				return newError("identifier not found: " + ident.Value)
+				return newError("identifier not found: %s", ident.Value)
 			}
 		} else {
-			return newError("left value not a identifier: " + node.DelIdent.String())
+			if refer, ok := Eval(node.DelIdent, env).(*object.Reference); ok {
+				if refer.Const {
+					return newError("delete a constant reference: %s", node.DelIdent.String())
+				}
+				if refer.Origin != nil {
+					if !refer.Origin.DeAlloc(refer.Index) {
+						return newError("unable to dealloc: %s", node.DelIdent.String())
+					}
+					return Void
+				}
+			}
+			return newError("left value not Identifier or AllocRequired: %s", node.DelIdent.String())
 		}
 	}
 
@@ -591,10 +612,7 @@ func applyFunction(fn object.Object, args []object.Object, env *object.Environme
 				argsRef = append(argsRef, &object.Reference{Value: &arr, Const: true})
 			}
 		}
-		inner.SetCurrent("args", &object.Array{
-			Elements: argsRef,
-			Copyable: false,
-		})
+		inner.SetCurrent("args", &object.Array{Elements: argsRef, Copyable: false})
 		evaluated := Eval(function.Body, inner)
 		return unwrapRetValue(evaluated)
 	}
@@ -766,16 +784,16 @@ func evalRefStatement(node *ast.RefStatement, env *object.Environment) object.Ob
 		return left
 	}
 	if refer, ok := left.(*object.Reference); ok {
+		if refer.Value == nil {
+			return newError("refer to [NOT ALLOC]: %s", left.Inspect())
+		}
 		if _, ok := env.SetCurrent(node.Name.Value, refer); !ok {
-			return newError("identifier %s already set", node.Name.Value)
+			return newError("identifier %s already set", left.Inspect())
 		}
 		return Void
 	} else {
-		if _, ok := node.Value.(*ast.Identifier); ok {
-			return newError("left value is a identifier")
-		}
 		if _, ok := env.SetCurrent(node.Name.Value, &object.Reference{Value: &left, Const: true}); !ok {
-			return newError("identifier %s already set", node.Name.Value)
+			return newError("identifier %s already set", left.Inspect())
 		}
 		return Void
 	}
@@ -801,6 +819,9 @@ func evalAssignExpression(node *ast.AssignExpression, env *object.Environment) o
 	}
 
 	left := Eval(node.Left, env)
+	if isError(left) {
+		return left
+	}
 	if refer, ok := left.(*object.Reference); ok {
 		if refer.Const {
 			return newError("assign to const reference")
@@ -833,12 +854,8 @@ func evalAssignExpression(node *ast.AssignExpression, env *object.Environment) o
 		}
 		*refer.Value = newVal
 		return newVal
-	} else {
-		if _, ok := node.Left.(*ast.Identifier); ok {
-			return newError("left value is a identifier")
-		}
 	}
-	return newError("left value not a identifier or a reference: " + node.Left.String())
+	return newError("left value not Reference: %s", left.Inspect())
 }
 
 func evalInfixExpression(

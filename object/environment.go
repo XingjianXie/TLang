@@ -24,37 +24,36 @@ func (e *Environment) Get(name string) (*Object, bool) {
 	return obj, ok
 }
 
-func (e *Environment) SetCurrent(name string, val Object) (*Object, bool) {
-	_, ok := e.store[name]
-	if ok {
-		return nil, false
-	}
-	e.store[name] = &val
-	return &val, true
-}
-
-func (e *Environment) SetAvailable(name string, val Object) (*Object, bool) {
-	obj, ok := e.store[name]
-	if ok {
-		if _, ok := (*obj).(*Reference); ok {
+func (e *Environment) DoAlloc(Index Object) (*Object, bool) {
+	if envIndex, ok := Index.(*String); ok {
+		if _, ok := e.store[envIndex.Value]; ok {
 			return nil, false
 		}
-		*obj = val
-		return &val, ok
-	}
-	if e.outer != nil {
-		return e.outer.SetAvailable(name, val)
+		var obj Object = nil
+		e.store[envIndex.Value] = &obj
+		return &obj, true
 	}
 	return nil, false
 }
 
-func (e *Environment) Del(name string) {
-	_, ok := e.store[name]
-	if ok {
-		delete(e.store, name)
-		return
+func (e *Environment) SetCurrent(name string, val Object) (*Object, bool) {
+	if ptr, ok := e.DoAlloc(&String{Value: name}); ok {
+		*ptr = val
+		return ptr, true
 	}
-	if !ok && e.outer != nil {
-		e.outer.Del(name)
+	return nil, false
+}
+
+func (e *Environment) DeAlloc(Index Object) bool {
+	if envIndex, ok := Index.(*String); ok {
+		_, ok := e.store[envIndex.Value]
+		if ok {
+			delete(e.store, envIndex.Value)
+			return true
+		}
+		if !ok && e.outer != nil {
+			e.outer.DeAlloc(envIndex)
+		}
 	}
+	return false
 }

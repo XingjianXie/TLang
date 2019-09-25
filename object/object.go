@@ -54,6 +54,11 @@ type HashAble interface {
 	HashKey() HashKey
 }
 
+type AllocRequired interface {
+	DoAlloc(Index Object) (*Object, bool)
+	DeAlloc(Index Object) bool
+}
+
 type HashKey struct {
 	Type  Type
 	Value interface{}
@@ -251,8 +256,10 @@ func (a *Array) Copy() Object {
 }
 
 type Reference struct {
-	Value *Object
-	Const bool
+	Value  *Object
+	Origin AllocRequired
+	Index  Object
+	Const  bool
 }
 
 func (r *Reference) Inspect() string {
@@ -274,12 +281,37 @@ func (r *Reference) Copy() Object {
 
 type HashPair struct {
 	Key   Object
-	Value Object
+	Value *Object
 }
 
 type Hash struct {
 	Pairs    map[HashKey]HashPair
 	Copyable bool
+}
+
+func (h *Hash) DoAlloc(Index Object) (*Object, bool) {
+	if hashIndex, ok := Index.(HashAble); ok {
+		key := hashIndex.HashKey()
+		if _, ok := h.Pairs[key]; !ok {
+			var obj Object = nil
+			h.Pairs[key] = HashPair{
+				Key:   hashIndex,
+				Value: &obj,
+			}
+			return &obj, true
+		}
+	}
+	return nil, false
+}
+func (h *Hash) DeAlloc(Index Object) bool {
+	if hashIndex, ok := Index.(HashAble); ok {
+		key := hashIndex.HashKey()
+		if _, ok := h.Pairs[key]; ok {
+			delete(h.Pairs, key)
+			return true
+		}
+	}
+	return false
 }
 
 func (h *Hash) Inspect() string {
@@ -288,7 +320,7 @@ func (h *Hash) Inspect() string {
 	var pairs []string
 	for _, pair := range h.Pairs {
 		pairs = append(pairs, fmt.Sprintf("%s: %s",
-			pair.Key.Inspect(), pair.Value.Inspect()))
+			pair.Key.Inspect(), (*pair.Value).Inspect()))
 	}
 
 	out.WriteString("{")
@@ -305,9 +337,10 @@ func (h *Hash) Copy() Object {
 	}
 	pairs := make(map[HashKey]HashPair)
 	for index, pair := range h.Pairs {
+		newVal := (*pair.Value).Copy()
 		pairs[index] = HashPair{
 			Key:   pair.Key,
-			Value: pair.Value.Copy(),
+			Value: &newVal,
 		}
 	}
 

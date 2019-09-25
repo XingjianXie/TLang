@@ -251,7 +251,11 @@ func init() {
 			if refer.Const {
 				isConst = "CONST "
 			}
-			return &object.String{Value: isConst + "REFERENCE: " + string((*refer.Value).Type())}
+			rawType := "[NOT ALLOC]"
+			if refer.Value != nil {
+				rawType = string((*refer.Value).Type())
+			}
+			return &object.String{Value: isConst + "REFERENCE: " + rawType}
 		}
 		return &object.String{Value: string(args[0].Type())}
 	}
@@ -496,7 +500,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.DelStatement:
 		if ident, ok := node.DelIdent.(*ast.Identifier); ok {
 			if _, ok := env.Get(ident.Value); ok {
-				env.Del(ident.Value)
+				//TODO: DELETE REFERENCE
+				env.DeAlloc(&object.String{Value: ident.Value})
 			} else {
 				return newError("identifier not found: " + ident.Value)
 			}
@@ -559,10 +564,11 @@ func applyIndex(ident object.Object, indexes []object.Object) object.Object {
 		}
 		pair, ok := hash.Pairs[key.HashKey()]
 		if !ok {
-			return Void
+			return &object.Reference{Value: nil, Const: constObj, Origin: hash, Index: key}
+			//return Void
 		}
 
-		return pair.Value
+		return &object.Reference{Value: pair.Value, Const: constObj, Origin: hash, Index: key}
 	}
 	return newError("not Array, String or Hash: %s", ident.Type())
 }
@@ -639,6 +645,9 @@ func unwrapOutValue(obj object.Object) object.Object {
 
 func unwrapReferenceValue(obj object.Object) object.Object {
 	if referenceVal, ok := obj.(*object.Reference); ok {
+		if referenceVal.Value == nil {
+			return Void
+		}
 		return *referenceVal.Value
 	}
 
@@ -677,8 +686,10 @@ func evalIdentifier(
 			return refer
 		}
 		return &object.Reference{
-			Value: val,
-			Const: false,
+			Value:  val,
+			Origin: env,
+			Index:  &object.String{Value: node.Value},
+			Const:  false,
 		}
 	}
 
@@ -712,7 +723,7 @@ func evalHashLiteral(
 		}
 
 		hashed := hashKey.HashKey()
-		pairs[hashed] = object.HashPair{Key: key, Value: value}
+		pairs[hashed] = object.HashPair{Key: key, Value: &value}
 	}
 
 	return &object.Hash{Pairs: pairs}
@@ -793,6 +804,14 @@ func evalAssignExpression(node *ast.AssignExpression, env *object.Environment) o
 	if refer, ok := left.(*object.Reference); ok {
 		if refer.Const {
 			return newError("assign to const reference")
+		}
+		if refer.Value == nil {
+			if refer.Origin == nil {
+				return newError("assign to empty reference with no alloc function")
+			}
+			if refer.Value, ok = refer.Origin.DoAlloc(refer.Index); !ok {
+				return newError("assign to empty reference with alloc function failed")
+			}
 		}
 		var newVal object.Object
 		switch node.Operator {

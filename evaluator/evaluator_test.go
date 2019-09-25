@@ -575,6 +575,14 @@ func TestReference(t *testing.T) {
 		{"let x = 3; _{ args[0] + args[1] + args[2]; }(x, x, 5);", 11},
 		{"let x = 0; func(a) { a = 3; } (x); x;", 3},
 		{"let x = 0; func(a, b) { a = 3 + b; } (x, 5); x;", 8},
+
+		{"let x = 0; func() { x = 4; }(); x;", 4},
+		{"let x = 0; ref y = x; func() { y = 4; }(); int(y == x and x == 4);", 1},
+		{"let a = 0; ref b = a; func(t) { t = 5; }(a); b;", 5},
+
+		{"let a = { 1:2, 3:4, 5:6 }; a[1] = 4; a[1];", 4},
+		{"let a = { 1:2, 3:4, 5: 6}; ref b = a[1]; b = 4; a[1];", 4},
+		{"let a = { 1:2, \"1\":3 }; int(a[1] == 2 and a[string(1)] == 3);", 1},
 	}
 
 	for _, tt := range tests {
@@ -618,7 +626,7 @@ func TestHashLiterals(t *testing.T) {
 			t.Errorf("no pair for given key in Pairs")
 		}
 
-		testIntegerObject(t, pair.Value, expectedValue)
+		testIntegerObject(t, *pair.Value, expectedValue)
 	}
 }
 

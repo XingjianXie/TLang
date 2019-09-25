@@ -37,6 +37,7 @@ var precedences = map[token.Type]int{
 	token.Percentage:   Product,
 	token.Lparen:       Call,
 	token.Lbracket:     Index,
+	token.Dot:          Index,
 	token.And:          And,
 	token.Or:           Or,
 	token.Assign:       Assign,
@@ -174,6 +175,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(token.Assign, p.parseInfixExpression)
 
 	p.registerInfix(token.Lparen, p.parseCallExpression)
+	p.registerInfix(token.Dot, p.parseDotExpression)
 	p.registerInfix(token.Lbracket, p.parseIndexExpression)
 	p.registerInfix(token.Assign, p.parseAssignExpression)
 	p.registerInfix(token.PlusEq, p.parseAssignExpression)
@@ -652,6 +654,13 @@ func (p *Parser) parseFunctionParameters() []*ast.Identifier {
 func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
 	exp := &ast.CallExpression{Token: p.curToken, Function: function}
 	exp.Arguments = p.parseExpressionList(token.Rparen)
+	return exp
+}
+
+func (p *Parser) parseDotExpression(left ast.Expression) ast.Expression {
+	exp := &ast.DotExpression{Token: p.curToken, Left: left}
+	p.nextToken()
+	exp.Right = p.parseExpression(Index)
 	return exp
 }
 

@@ -473,6 +473,12 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 
 		return applyIndex(ident, indexes)
+	case *ast.DotExpression:
+		left := Eval(node.Left, env)
+		if str, ok := node.Right.(*ast.Identifier); ok {
+			return applyIndex(left, []object.Object{&object.String{Value: str.Value}})
+		}
+		return newError("Not a key: %s", node.Right.String())
 
 	case *ast.ExpressionStatement:
 		return Eval(node.Expression, env)
@@ -518,11 +524,11 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		} else {
 			if refer, ok := Eval(node.DelIdent, env).(*object.Reference); ok {
 				if refer.Const {
-					return newError("delete a constant reference: %s", node.DelIdent.String())
+					return newError("delete a constant reference: %s", refer.Inspect())
 				}
 				if refer.Origin != nil {
 					if !refer.Origin.DeAlloc(refer.Index) {
-						return newError("unable to dealloc: %s", node.DelIdent.String())
+						return newError("unable to dealloc: %s", refer.Inspect())
 					}
 					return Void
 				}

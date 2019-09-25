@@ -391,7 +391,7 @@ func (ul *UnderLineLiteral) String() string {
 
 type CallExpression struct {
 	Token     token.Token // The '(' token
-	Function  Expression  // Identifier or FunctionLiteral
+	Function  Expression
 	Arguments []Expression
 }
 
@@ -413,9 +413,29 @@ func (ce *CallExpression) String() string {
 	return out.String()
 }
 
+type DotExpression struct {
+	Token token.Token // The '.' token
+	Left  Expression
+	Right Expression
+}
+
+func (de *DotExpression) expressionNode()      {}
+func (de *DotExpression) TokenLiteral() string { return de.Token.Literal }
+func (de *DotExpression) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("(")
+	out.WriteString(de.Left.String())
+	out.WriteString(".")
+	out.WriteString(de.Right.String())
+	out.WriteString(")")
+
+	return out.String()
+}
+
 type IndexExpression struct {
-	Token   token.Token // The '(' token
-	Left    Expression  // Identifier or FunctionLiteral
+	Token   token.Token // The '[' token
+	Left    Expression
 	Indexes []Expression
 }
 

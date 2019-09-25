@@ -663,6 +663,10 @@ func TestHashIndexExpressions(t *testing.T) {
 			`{false: 5}[false];`,
 			5,
 		},
+		{
+			`{ "x": 2, "t": "z" }.x;`,
+			2,
+		},
 	}
 
 	for _, tt := range tests {

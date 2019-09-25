@@ -7,6 +7,7 @@ import (
 	"TLang/parser"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"math"
 	"os"
 	"strconv"
@@ -314,16 +315,47 @@ func init() {
 
 	NativeValue = func(env *object.Environment, args []object.Object) object.Object {
 		if len(args) != 1 {
-			return newError("native function array: len(args) should be 1")
+			return newError("native function value: len(args) should be 1")
 		}
 		return unwrapReferenceValue(args[0])
 	}
 
 	NativeEcho = func(env *object.Environment, args []object.Object) object.Object {
 		if len(args) != 1 {
-			return newError("native function array: len(args) should be 1")
+			return newError("native function echo: len(args) should be 1")
 		}
 		return args[0]
+	}
+
+	NativeImport = func(env *object.Environment, args []object.Object) object.Object {
+		if len(args) != 1 {
+			return newError("native function import: len(args) should be 1")
+		}
+		if str, ok := unwrapReferenceValue(args[0]).(*object.String); ok {
+			data, err := ioutil.ReadFile(str.Value)
+			if err != nil {
+				return newError("unable to read file %s: %s", str.Value, err.Error())
+			}
+			l := lexer.New(string(data))
+			p := parser.New(l)
+
+			program := p.ParseProgram()
+			if len(p.Errors()) != 0 {
+				PrintParserErrors(os.Stdout, p.Errors())
+				return newError("error inner import")
+			}
+
+			importEnv := object.NewEnvironment()
+			result := Eval(program, importEnv)
+			if isError(result) {
+				return result
+			}
+			if export, ok := importEnv.Get("export"); ok {
+				return &object.Reference{Value: export, Const: true}
+			}
+			return newError("native function import: export obj not found")
+		}
+		return newError("native function import: arg should be String")
 	}
 
 	natives = map[string]*object.Native{
@@ -346,6 +378,7 @@ func init() {
 		"array":     {NativeArray},
 		"value":     {NativeValue},
 		"echo":      {NativeEcho},
+		"import":    {NativeImport},
 	}
 }
 
@@ -369,6 +402,7 @@ var (
 	NativeArray     func(env *object.Environment, args []object.Object) object.Object
 	NativeValue     func(env *object.Environment, args []object.Object) object.Object
 	NativeEcho      func(env *object.Environment, args []object.Object) object.Object
+	NativeImport    func(env *object.Environment, args []object.Object) object.Object
 )
 
 var natives map[string]*object.Native
@@ -475,6 +509,9 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return applyIndex(ident, indexes)
 	case *ast.DotExpression:
 		left := Eval(node.Left, env)
+		if isError(left) {
+			return left
+		}
 		if str, ok := node.Right.(*ast.Identifier); ok {
 			return applyIndex(left, []object.Object{&object.String{Value: str.Value}})
 		}

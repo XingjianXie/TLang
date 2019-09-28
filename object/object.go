@@ -181,7 +181,7 @@ type UnderLine struct {
 func (u *UnderLine) Inspect() string {
 	var out bytes.Buffer
 
-	out.WriteString("_")
+	out.WriteString("_ ")
 	out.WriteString(u.Body.String())
 
 	return out.String()
@@ -323,9 +323,9 @@ func (h *Hash) Inspect() string {
 			pair.Key.Inspect(), (*pair.Value).Inspect()))
 	}
 
-	out.WriteString("{")
+	out.WriteString("{ ")
 	out.WriteString(strings.Join(pairs, ", "))
-	out.WriteString("}")
+	out.WriteString(" }")
 
 	return out.String()
 }

@@ -298,12 +298,10 @@ func (ie *IfExpression) String() string {
 	out.WriteString(ie.Condition.String())
 	out.WriteString(" ")
 	out.WriteString(ie.Consequence.String())
-	out.WriteString(" ")
 
 	if ie.Alternative != nil {
-		out.WriteString("else ")
+		out.WriteString(" else ")
 		out.WriteString(ie.Alternative.String())
-		out.WriteString(" ")
 	}
 
 	return out.String()
@@ -340,7 +338,10 @@ func (bs *BlockStatement) String() string {
 	var out bytes.Buffer
 
 	out.WriteString("{ ")
-	for _, s := range bs.Statements {
+	for index, s := range bs.Statements {
+		if index != 0 {
+			out.WriteString(" ")
+		}
 		out.WriteString(s.String())
 	}
 	out.WriteString(" }")
@@ -384,6 +385,7 @@ func (ul *UnderLineLiteral) String() string {
 	var out bytes.Buffer
 
 	out.WriteString(ul.TokenLiteral())
+	out.WriteString(" ")
 	out.WriteString(ul.Body.String())
 
 	return out.String()

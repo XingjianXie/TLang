@@ -645,7 +645,7 @@ func applyFunction(fn object.Object, args []object.Object, env *object.Environme
 	}
 
 	if function, ok := fn.(*object.UnderLine); ok {
-		inner := env.NewEnclosedEnvironment()
+		inner := function.Env.NewEnclosedEnvironment()
 		var argsRef []object.Object
 		for _, arg := range args {
 			if refer, ok := arg.(*object.Reference); ok {

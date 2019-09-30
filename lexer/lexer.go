@@ -201,6 +201,10 @@ func (l *Lexer) readString() string {
 	position := l.position + 1
 	for {
 		l.readChar()
+		if l.ch == '\\' {
+			l.readChar()
+			l.readChar()
+		}
 		if l.ch == '"' || l.ch == 0 {
 			break
 		}

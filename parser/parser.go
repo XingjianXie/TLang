@@ -417,7 +417,13 @@ func (p *Parser) parseVoidLiteral() ast.Expression {
 }
 
 func (p *Parser) parseStringLiteral() ast.Expression {
-	return &ast.StringLiteral{Token: p.curToken, Value: p.curToken.Literal}
+	str, err := strconv.Unquote("\"" + p.curToken.Literal + "\"")
+	if err != nil {
+		msg := fmt.Sprintf("escape failed: %s", err.Error())
+		p.errors = append(p.errors, msg)
+		return nil
+	}
+	return &ast.StringLiteral{Token: p.curToken, Value: str}
 }
 
 func (p *Parser) parseCharacterLiteral() ast.Expression {

@@ -4,6 +4,7 @@ import (
 	"TLang/ast"
 	"bytes"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -194,7 +195,7 @@ type String struct {
 	Value string
 }
 
-func (s *String) Inspect() string   { return "\"" + s.Value + "\"" }
+func (s *String) Inspect() string   { return strconv.Quote(s.Value) }
 func (s *String) Type() Type        { return STRING }
 func (s *String) Copy() Object      { return s }
 func (s *String) LetterObj() string { return s.Value }

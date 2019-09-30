@@ -3,6 +3,7 @@ package ast
 import (
 	"TLang/token"
 	"bytes"
+	"strconv"
 	"strings"
 )
 
@@ -489,7 +490,7 @@ type StringLiteral struct {
 
 func (sl *StringLiteral) expressionNode()      {}
 func (sl *StringLiteral) TokenLiteral() string { return sl.Token.Literal }
-func (sl *StringLiteral) String() string       { return "\"" + sl.Token.Literal + "\"" }
+func (sl *StringLiteral) String() string       { return strconv.Quote(sl.Value) }
 
 type CharacterLiteral struct {
 	Token token.Token

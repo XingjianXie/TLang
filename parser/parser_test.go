@@ -659,7 +659,7 @@ func TestLoopExpression(t *testing.T) {
 
 	consequence2, ok := exp.Body.Statements[1].(*ast.RetStatement)
 	if !ok {
-		t.Fatalf("Statements[1] is not ast.ExpressionStatement. got=%T",
+		t.Fatalf("Statements[1] is not ast.RetStatement. got=%T",
 			exp.Body.Statements[0])
 	}
 
@@ -668,6 +668,57 @@ func TestLoopExpression(t *testing.T) {
 	}
 
 	if !testLiteralExpression(t, consequence2.RetValue, nil) {
+		return
+	}
+}
+
+func TestLoopInExpression(t *testing.T) {
+	input := `loop a in [1, 2, 3] { void; };`
+
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.Statements) != 1 {
+		t.Fatalf("program.Statements does not contain %d statements. got=%d\n",
+			1, len(program.Statements))
+	}
+
+	stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.ExpressionStatement. got=%T",
+			program.Statements[0])
+	}
+
+	exp, ok := stmt.Expression.(*ast.LoopInExpression)
+	if !ok {
+		t.Fatalf("stmt.Expression is not ast.IfExpression. got=%T",
+			stmt.Expression)
+	}
+
+	if exp.Name.Value != "a" {
+		t.Errorf("name is not a")
+		return
+	}
+
+	if exp.Range.String() != "[1, 2, 3]" {
+		t.Errorf("range is not [1, 2, 3]")
+		return
+	}
+
+	if len(exp.Body.Statements) != 1 {
+		t.Errorf("consequence is not 1 statements. got=%d\n",
+			len(exp.Body.Statements))
+	}
+
+	consequence1, ok := exp.Body.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("Statements[0] is not ast.ExpressionStatement. got=%T",
+			exp.Body.Statements[0])
+	}
+
+	if !testLiteralExpression(t, consequence1.Expression, nil) {
 		return
 	}
 }
@@ -844,7 +895,7 @@ func TestCallExpressionParsing(t *testing.T) {
 	testLiteralExpression(t, exp.Arguments[0], 1)
 	testInfixExpression(t, exp.Arguments[1], 2, "*", 3)
 	testInfixExpression(t, exp.Arguments[2], 4, "+", 5)
-	if exp.String() != "add(1, (2 * 3), (4 + 5), if x { ret 3; } else { ret 4; } )" {
+	if exp.String() != "add(1, (2 * 3), (4 + 5), if x { ret 3; } else { ret 4; })" {
 		t.Fatalf("wrong exp. got=%s", exp.String())
 	}
 }

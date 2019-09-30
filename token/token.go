@@ -23,6 +23,7 @@ var keywords = map[string]Type{
 	"del":   Del,
 	"and":   And,
 	"or":    Or,
+	"in":    In,
 	"_":     Underline,
 }
 
@@ -94,6 +95,7 @@ const (
 	Jump      = "Jump"
 	Ret       = "Ret"
 	Underline = "Underline"
+	In        = "In"
 	And       = "And"
 	Or        = "Or"
 	Del       = "Del"

@@ -555,11 +555,33 @@ func (p *Parser) parseIfExpression() ast.Expression {
 }
 
 func (p *Parser) parseLoopExpression() ast.Expression {
-	expression := &ast.LoopExpression{Token: p.curToken}
+	Token := p.curToken
+
+	if p.peekTokenIs(token.Ident) {
+		p.nextToken()
+		expression := &ast.LoopInExpression{
+			Token: Token,
+			Name:  &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal},
+		}
+		if !p.expectPeek(token.In) {
+			return nil
+		}
+		p.nextToken()
+		expression.Range = p.parseExpression(Lowest)
+
+		if !p.expectPeek(token.Lbrace) {
+			return nil
+		}
+
+		expression.Body = p.parseBlockStatement()
+		return expression
+	}
 
 	if !p.expectPeek(token.Lparen) {
 		return nil
 	}
+
+	expression := &ast.LoopExpression{Token: Token}
 
 	p.nextToken()
 	expression.Condition = p.parseExpression(Lowest)

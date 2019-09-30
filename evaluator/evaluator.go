@@ -481,6 +481,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return evalIfExpression(node, env)
 	case *ast.LoopExpression:
 		return evalLoopExpression(node, env)
+	case *ast.LoopInExpression:
+		return evalLoopInExpression(node, env)
 	case *ast.AssignExpression:
 		return evalAssignExpression(node, env)
 	case *ast.CallExpression:
@@ -1192,6 +1194,37 @@ func evalLoopExpression(le *ast.LoopExpression, env *object.Environment) object.
 		condition = unwrapReferenceValue(Eval(le.Condition, env))
 		if isError(condition) {
 			return condition
+		}
+	}
+	return result
+}
+
+func evalLoopInExpression(le *ast.LoopInExpression, env *object.Environment) object.Object {
+	result := Void
+
+	loopRange := Eval(le.Range, env)
+	if isError(loopRange) {
+		return loopRange
+	}
+	length := NativeLen(env, []object.Object{loopRange})
+	if isError(length) {
+		return length
+	}
+
+	for i := int64(0); i < length.(*object.Integer).Value; i++ {
+		newEnv := env.NewEnclosedEnvironment()
+		newEnv.SetCurrent(le.Name.Value, applyIndex(loopRange, []object.Object{&object.Integer{Value: i}}))
+		newResult := Eval(le.Body, newEnv)
+		if isError(newResult) || newResult.Type() == object.RET {
+			return newResult
+		}
+
+		if newResult.Type() == object.OUT {
+			return unwrapOutValue(newResult)
+		}
+
+		if newResult.Type() != object.JUMP {
+			result = newResult
 		}
 	}
 	return result

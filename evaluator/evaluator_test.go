@@ -679,3 +679,35 @@ func TestHashIndexExpressions(t *testing.T) {
 		}
 	}
 }
+
+func TestLoopExpression(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected int64
+	}{
+		{"let i = 0; let a = 0; loop(i <= 10) { a += i; i += 1; }; a;", 55},
+		{"let i = 0; let a = 0; loop(true) { a += i; i += 1; if (i > 10) { out; }; }; a;", 55},
+		{"let i = 0; let a = 0; loop(true) { a += i; i += 1; if (i > 100) { out; }; }; a;", 5050},
+		{"let i = 0; let a = 0; loop(false) { a += i; i += 1; if (i > 100) { out; }; }; a;", 0},
+	}
+
+	for _, tt := range tests {
+		testIntegerObject(t, testEval(tt.input), tt.expected)
+	}
+}
+
+func TestLoopInExpression(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected int64
+	}{
+		{"let a = [5, 2, 3]; let sum = 0; loop obj in a { sum += obj; }; sum;", 10},
+		{"let a = [5, 2, 5]; ref b = a; let sum = 0; loop obj in b { sum += obj; }; sum;", 12},
+		{"let a = array(5, 0, _ { args[1] + 1; }); let sum = 0; loop obj in a { sum += obj; }; sum;", 15},
+		{"let a = array(5, 0, _ { args[1] + 2; }); let sum = 0; loop obj in a { sum += obj; }; sum;", 30},
+	}
+
+	for _, tt := range tests {
+		testIntegerObject(t, testEval(tt.input), tt.expected)
+	}
+}

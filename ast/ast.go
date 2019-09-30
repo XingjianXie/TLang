@@ -322,7 +322,28 @@ func (le *LoopExpression) String() string {
 	out.WriteString(le.Condition.String())
 	out.WriteString(" ")
 	out.WriteString(le.Body.String())
+
+	return out.String()
+}
+
+type LoopInExpression struct {
+	Token token.Token // The 'ref' token
+	Name  *Identifier
+	Range Expression
+	Body  *BlockStatement
+}
+
+func (li *LoopInExpression) expressionNode()      {}
+func (li *LoopInExpression) TokenLiteral() string { return li.Token.Literal }
+func (li *LoopInExpression) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("loop ")
+	out.WriteString(li.Name.Value)
+	out.WriteString(" in ")
+	out.WriteString(li.Range.String())
 	out.WriteString(" ")
+	out.WriteString(li.Body.String())
 
 	return out.String()
 }

@@ -5,6 +5,7 @@ import (
 	"TLang/lexer"
 	"TLang/object"
 	"TLang/parser"
+	"bufio"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -54,7 +55,7 @@ func init() {
 		var input string
 		_, _ = fmt.Scanf("%s", &input)
 
-		return &object.String{Value: input}
+		return &object.String{Value: []rune(input)}
 	}
 	NativePrintLine = func(env *object.Environment, args []object.Object) object.Object {
 		if len(args) == 0 {
@@ -70,10 +71,9 @@ func init() {
 		if len(args) != 0 {
 			return newError("native function len: len(args) should be 0")
 		}
-		var input string
-		_, _ = fmt.Scanln(&input)
+		data, _, _ := bufio.NewReader(os.Stdin).ReadLine()
 
-		return &object.String{Value: input}
+		return &object.String{Value: []rune(string(data))}
 	}
 	NativeString = func(env *object.Environment, args []object.Object) object.Object {
 		if len(args) != 1 {
@@ -84,9 +84,9 @@ func init() {
 			return str
 		}
 		if ch, ok := un.(*object.Character); ok {
-			return &object.String{Value: string(ch.Value)}
+			return &object.String{Value: []rune{*ch.Value}}
 		}
-		return &object.String{Value: un.Inspect()}
+		return &object.String{Value: []rune(un.Inspect())}
 	}
 	NativeExit = func(env *object.Environment, args []object.Object) object.Object {
 		if len(args) != 1 && len(args) != 0 {
@@ -108,7 +108,7 @@ func init() {
 		}
 
 		if str, ok := unwrapReferenceValue(args[0]).(*object.String); ok {
-			l := lexer.New(str.Value)
+			l := lexer.New(string(str.Value))
 			p := parser.New(l)
 
 			program := p.ParseProgram()
@@ -128,15 +128,15 @@ func init() {
 		}
 		switch arg := unwrapReferenceValue(args[0]).(type) {
 		case *object.String:
-			val, err := strconv.ParseInt(arg.Value, 10, 64)
+			val, err := strconv.ParseInt(string(arg.Value), 10, 64)
 			if err != nil {
 				return newError("could not parse %s as integer", arg.Value)
 			}
 			return &object.Integer{Value: val}
 		case *object.Character:
-			val, err := strconv.ParseInt(string(arg.Value), 10, 64)
+			val, err := strconv.ParseInt(string(*arg.Value), 10, 64)
 			if err != nil {
-				return newError("could not parse %s as integer", string(arg.Value))
+				return newError("could not parse %s as integer", string(*arg.Value))
 			}
 			return &object.Integer{Value: val}
 		case *object.Boolean:
@@ -162,15 +162,15 @@ func init() {
 		}
 		switch arg := unwrapReferenceValue(args[0]).(type) {
 		case *object.String:
-			val, err := strconv.ParseFloat(arg.Value, 64)
+			val, err := strconv.ParseFloat(string(arg.Value), 64)
 			if err != nil {
 				return newError("could not parse %s as float", arg.Value)
 			}
 			return &object.Float{Value: val}
 		case *object.Character:
-			val, err := strconv.ParseFloat(string(arg.Value), 64)
+			val, err := strconv.ParseFloat(string(*arg.Value), 64)
 			if err != nil {
-				return newError("could not parse %s as float", string(arg.Value))
+				return newError("could not parse %s as float", string(*arg.Value))
 			}
 			return &object.Float{Value: val}
 		case *object.Boolean:
@@ -202,7 +202,7 @@ func init() {
 			return newError("native function fetch: len(args) should be 1")
 		}
 		if err, ok := args[0].(*object.Err); ok {
-			return &object.String{Value: err.Inspect()}
+			return &object.String{Value: []rune(err.Inspect())}
 		}
 		return args[0]
 	}
@@ -256,9 +256,9 @@ func init() {
 			if refer.Value != nil {
 				rawType = string((*refer.Value).Type())
 			}
-			return &object.String{Value: isConst + "REFERENCE: " + rawType}
+			return &object.String{Value: []rune(isConst + "REFERENCE: " + rawType)}
 		}
-		return &object.String{Value: string(args[0].Type())}
+		return &object.String{Value: []rune(args[0].Type())}
 	}
 
 	NativeArray = func(env *object.Environment, args []object.Object) object.Object {
@@ -332,7 +332,7 @@ func init() {
 			return newError("native function import: len(args) should be 1")
 		}
 		if str, ok := unwrapReferenceValue(args[0]).(*object.String); ok {
-			data, err := ioutil.ReadFile(str.Value)
+			data, err := ioutil.ReadFile(string(str.Value))
 			if err != nil {
 				return newError("unable to read file %s: %s", str.Value, err.Error())
 			}
@@ -436,9 +436,9 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.FloatLiteral:
 		return &object.Float{Value: node.Value}
 	case *ast.StringLiteral:
-		return &object.String{Value: node.Value}
+		return &object.String{Value: []rune(node.Value)}
 	case *ast.CharacterLiteral:
-		return &object.Character{Value: node.Value}
+		return &object.Character{Value: &node.Value}
 	case *ast.BooleanLiteral:
 		return nativeBoolToBooleanObject(node.Value)
 	case *ast.Identifier:
@@ -515,7 +515,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			return left
 		}
 		if str, ok := node.Right.(*ast.Identifier); ok {
-			return applyIndex(left, []object.Object{&object.String{Value: str.Value}})
+			return applyIndex(left, []object.Object{&object.String{Value: []rune(str.Value)}})
 		}
 		return newError("Not a key: %s", node.Right.String())
 
@@ -554,7 +554,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.DelStatement:
 		if ident, ok := node.DelIdent.(*ast.Identifier); ok {
 			if _, ok := env.Get(ident.Value); ok {
-				if !env.DeAlloc(&object.String{Value: ident.Value}) {
+				if !env.DeAlloc(&object.String{Value: []rune(ident.Value)}) {
 					return newError("unable to dealloc: %s", node.DelIdent.String())
 				}
 			} else {
@@ -605,7 +605,7 @@ func applyIndex(ident object.Object, indexes []object.Object) object.Object {
 		return &object.Reference{Value: refObj, Const: constObj}
 	}
 	if str, ok := ident.(*object.String); ok {
-		runeStr := []rune(str.Value)
+		//runeStr := []rune(str.Value)
 		if len(indexes) != 1 {
 			return newError("string: len(indexes) should be 1")
 		}
@@ -613,11 +613,13 @@ func applyIndex(ident object.Object, indexes []object.Object) object.Object {
 			return newError("string: index should be Integer")
 		}
 		index := indexes[0].(*object.Integer).Value
-		length := int64(len(runeStr))
+		length := int64(len(str.Value))
 		if index >= length || index < 0 {
 			return newError("string: out of range")
 		}
-		return &object.Character{Value: runeStr[index]}
+		//return &object.Character{Value: runeStr[index]}
+		var refObj object.Object = &object.Character{Value: &str.Value[index]}
+		return &object.Reference{Value: &refObj, Const: constObj}
 	}
 	if hash, ok := ident.(*object.Hash); ok {
 		if len(indexes) != 1 {
@@ -751,7 +753,7 @@ func evalIdentifier(
 		return &object.Reference{
 			Value:  val,
 			Origin: env,
-			Index:  &object.String{Value: node.Value},
+			Index:  &object.String{Value: []rune(node.Value)},
 			Const:  false,
 		}
 	}
@@ -897,6 +899,12 @@ func evalAssignExpression(node *ast.AssignExpression, env *object.Environment) o
 		if isError(newVal) {
 			return newVal
 		}
+		if chL, ok := (*refer.Value).(*object.Character); ok {
+			if chR, ok := newVal.(*object.Character); ok {
+				*chL.Value = *chR.Value
+				return chR
+			}
+		}
 		*refer.Value = newVal
 		return newVal
 	}
@@ -964,7 +972,7 @@ func evalStringInfixExpression(
 	case "!=":
 		return nativeBoolToBooleanObject(left != right)
 	case "+":
-		return &object.String{Value: left + right}
+		return &object.String{Value: []rune(left + right)}
 	default:
 		return newError("unknown operator: %s %s %s",
 			object.STRING, operator, object.STRING)

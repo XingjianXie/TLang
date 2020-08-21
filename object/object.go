@@ -192,25 +192,25 @@ func (u *UnderLine) Copy() Object     { return u }
 func (u *UnderLine) LikeFunctionObj() {}
 
 type String struct {
-	Value string
+	Value []rune
 }
 
-func (s *String) Inspect() string   { return strconv.Quote(s.Value) }
+func (s *String) Inspect() string   { return strconv.Quote(string(s.Value)) }
 func (s *String) Type() Type        { return STRING }
 func (s *String) Copy() Object      { return s }
-func (s *String) LetterObj() string { return s.Value }
+func (s *String) LetterObj() string { return string(s.Value) }
 func (s *String) HashKey() HashKey {
 	return HashKey{Type: s.Type(), Value: s.Value}
 }
 
 type Character struct {
-	Value rune
+	Value *rune
 }
 
-func (c *Character) Inspect() string   { return "'" + string(c.Value) + "'" }
+func (c *Character) Inspect() string   { return "'" + string(*c.Value) + "'" }
 func (c *Character) Type() Type        { return CHARACTER }
 func (c *Character) Copy() Object      { return c }
-func (c *Character) LetterObj() string { return string(c.Value) }
+func (c *Character) LetterObj() string { return string(*c.Value) }
 func (c *Character) HashKey() HashKey {
 	return HashKey{Type: c.Type(), Value: c.Value}
 }

@@ -1,8 +1,8 @@
 package ast
 
 import (
-	"TLang/token"
 	"bytes"
+	"github.com/mark07x/TLang/token"
 	"strconv"
 	"strings"
 )

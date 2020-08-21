@@ -1,12 +1,12 @@
 package main
 
 import (
-	"TLang/evaluator"
-	"TLang/lexer"
-	"TLang/object"
-	"TLang/parser"
-	"TLang/repl"
 	"fmt"
+	"github.com/mark07x/TLang/evaluator"
+	"github.com/mark07x/TLang/lexer"
+	"github.com/mark07x/TLang/object"
+	"github.com/mark07x/TLang/parser"
+	"github.com/mark07x/TLang/repl"
 	"io"
 	"io/ioutil"
 	"os"

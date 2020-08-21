@@ -1,10 +1,10 @@
 package parser
 
 import (
-	"TLang/ast"
-	"TLang/lexer"
-	"TLang/token"
 	"fmt"
+	"github.com/mark07x/TLang/ast"
+	"github.com/mark07x/TLang/lexer"
+	"github.com/mark07x/TLang/token"
 	"strconv"
 )
 

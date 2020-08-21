@@ -1,12 +1,12 @@
 package evaluator
 
 import (
-	"TLang/ast"
-	"TLang/lexer"
-	"TLang/object"
-	"TLang/parser"
 	"bufio"
 	"fmt"
+	"github.com/mark07x/TLang/ast"
+	"github.com/mark07x/TLang/lexer"
+	"github.com/mark07x/TLang/object"
+	"github.com/mark07x/TLang/parser"
 	"io"
 	"io/ioutil"
 	"math"
@@ -44,7 +44,7 @@ func init() {
 	}
 	NativePrint = func(env *object.Environment, args []object.Object) object.Object {
 		for _, arg := range args {
-			fmt.Print(NativeString(env, []object.Object{unwrapReferenceValue(arg)}).(*object.String).Value)
+			fmt.Print(string(NativeString(env, []object.Object{unwrapReferenceValue(arg)}).(*object.String).Value))
 		}
 		return Void
 	}
@@ -63,7 +63,7 @@ func init() {
 			return Void
 		}
 		for _, arg := range args {
-			fmt.Println(NativeString(env, []object.Object{unwrapReferenceValue(arg)}).(*object.String).Value)
+			fmt.Println(string(NativeString(env, []object.Object{unwrapReferenceValue(arg)}).(*object.String).Value))
 		}
 		return Void
 	}

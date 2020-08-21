@@ -1,9 +1,9 @@
 package object
 
 import (
-	"TLang/ast"
 	"bytes"
 	"fmt"
+	"github.com/mark07x/TLang/ast"
 	"strconv"
 	"strings"
 )

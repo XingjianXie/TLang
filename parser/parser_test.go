@@ -1,9 +1,9 @@
 package parser
 
 import (
-	"TLang/ast"
-	"TLang/lexer"
 	"fmt"
+	"github.com/mark07x/TLang/ast"
+	"github.com/mark07x/TLang/lexer"
 	"testing"
 )
 

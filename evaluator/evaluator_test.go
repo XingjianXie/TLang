@@ -1,9 +1,9 @@
 package evaluator
 
 import (
-	"TLang/lexer"
-	"TLang/object"
-	"TLang/parser"
+	"github.com/mark07x/TLang/lexer"
+	"github.com/mark07x/TLang/object"
+	"github.com/mark07x/TLang/parser"
 	"testing"
 )
 

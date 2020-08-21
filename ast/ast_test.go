@@ -1,7 +1,7 @@
 package ast
 
 import (
-	"TLang/token"
+	"github.com/mark07x/TLang/token"
 	"testing"
 )
 

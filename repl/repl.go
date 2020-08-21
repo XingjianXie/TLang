@@ -1,12 +1,12 @@
 package repl
 
 import (
-	"TLang/evaluator"
-	"TLang/lexer"
-	"TLang/object"
-	"TLang/parser"
 	"bufio"
 	"fmt"
+	"github.com/mark07x/TLang/evaluator"
+	"github.com/mark07x/TLang/lexer"
+	"github.com/mark07x/TLang/object"
+	"github.com/mark07x/TLang/parser"
 	"io"
 )
 

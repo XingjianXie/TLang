@@ -26,6 +26,10 @@ type Environment struct {
 	outer *Environment
 }
 
+func (e *Environment) Inspect() string { return "[ENV]" }
+func (e *Environment) Type() Type      { return ENVIRONMENT }
+func (e *Environment) Copy() Object    { return e }
+
 func (e *Environment) Get(name string) (*Object, bool) {
 	obj, ok := e.store[name]
 	if !ok && e.outer != nil {

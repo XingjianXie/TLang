@@ -185,7 +185,7 @@ func TestIfElseExpressions(t *testing.T) {
 }
 
 func testNullObject(t *testing.T, obj object.Object) bool {
-	if obj != Void {
+	if obj != object.VoidObj {
 		t.Errorf("object is not Void. got=%T (%+v)", obj, obj)
 		return false
 	}
@@ -612,8 +612,8 @@ func TestHashLiterals(t *testing.T) {
 		(&object.String{Value: []rune("two")}).HashKey():   2,
 		(&object.String{Value: []rune("three")}).HashKey(): 8,
 		(&object.Integer{Value: 4}).HashKey():      4,
-		True.(*object.Boolean).HashKey():           5,
-		False.(*object.Boolean).HashKey():          6,
+		object.TrueObj.(*object.Boolean).HashKey():           5,
+		object.FalseObj.(*object.Boolean).HashKey():          6,
 	}
 
 	if len(result.Pairs) != len(expected) {

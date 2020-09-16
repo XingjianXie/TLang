@@ -10,6 +10,13 @@ import (
 
 type Type string
 
+var (
+	TrueObj  Object = &Boolean{Value: true}
+	FalseObj Object = &Boolean{Value: false}
+	VoidObj  Object = &Void{}
+	JumpObj  Object = &Jump{}
+)
+
 const (
 	INTEGER   = "INTEGER"
 	FLOAT     = "FLOAT"
@@ -27,7 +34,37 @@ const (
 	ARRAY     = "ARRAY"
 	REFERENCE = "REFERENCE"
 	HASH      = "HASH"
+	ENVIRONMENT = "ENVIRONMENT"
 )
+
+func UnwrapRetValue(obj Object) Object {
+	if retValue, ok := obj.(*RetValue); ok {
+		return retValue.Value
+	}
+
+	return obj
+}
+
+func UnwrapOutValue(obj Object) Object {
+	if retValue, ok := obj.(*OutValue); ok {
+		return retValue.Value
+	}
+
+	return obj
+}
+
+func UnwrapReferenceValue(obj Object) Object {
+	if referenceVal, ok := obj.(*Reference); ok {
+		if referenceVal.Value == nil {
+			return VoidObj
+		}
+		if fun, ok := (*referenceVal.Value).(*Function); ok {
+			fun.Env.SetCurrent("self", referenceVal.Origin)
+		}
+		return *referenceVal.Value
+	}
+	return obj
+}
 
 type Object interface {
 	Type() Type
@@ -56,6 +93,7 @@ type HashAble interface {
 }
 
 type AllocRequired interface {
+	Object
 	DoAlloc(Index Object) (*Object, bool)
 	DeAlloc(Index Object) bool
 }
@@ -281,8 +319,7 @@ func (r *Reference) Inspect() string {
 }
 func (r *Reference) Type() Type { return REFERENCE }
 func (r *Reference) Copy() Object {
-	println("WARNING: COPY REFERENCE")
-	return (*r.Value).Copy()
+	return r
 }
 
 type HashPair struct {
@@ -335,17 +372,7 @@ func (h *Hash) Inspect() string {
 
 	return out.String()
 }
-func (h *Hash) Type() Type {
-	if val, ok := h.Pairs[HashKey{
-		Type:  "STRING",
-		Value: "class",
-	}]; ok {
-		if str, ok := (*val.Value).(*String); ok {
-			return Type(HASH + " CLASS [" + string(str.Value) + "]")
-		}
-	}
-	return HASH
-}
+func (h *Hash) Type() Type { return HASH }
 func (h *Hash) Copy() Object {
 	if h.Copyable {
 		h.Copyable = false

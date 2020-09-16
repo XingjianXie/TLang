@@ -23,6 +23,25 @@ func PrintParserErrors(out io.Writer, errors []string) {
 
 func init() {
 	Bases = map[string]object.Object{
+		"super": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 2 {
+				return newError("native function super: len(args) should be 2")
+			}
+			return applyIndex(args[0], []object.Object{args[1]}, true)
+		}},
+		"override": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 3 {
+				return newError("native function override: len(args) should be 3")
+			}
+			if h, ok := object.UnwrapReferenceValue(args[0]).(*object.Hash); ok {
+				if key, ok := object.UnwrapReferenceValue(args[1]).(object.HashAble); ok {
+					h.Pairs[key.HashKey()] = object.HashPair{Key: key, Value: &args[2]}
+					return args[2]
+				}
+				return newError("native function override: args[1] should be HashAble")
+			}
+			return newError("native function override: args[0] should be Hash")
+		}},
 		"call": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 2 {
 				return newError("native function call: len(args) should be 2")
@@ -31,7 +50,7 @@ func init() {
 			if arr, ok := v.(*object.Array); ok {
 				return applyFunction(object.UnwrapReferenceValue(args[0]), arr.Elements, env)
 			}
-			return newError("native function subscript: args[1] should be Array")
+			return newError("native function call: args[1] should be Array")
 		}},
 		"subscript": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 2 {
@@ -39,7 +58,7 @@ func init() {
 			}
 			v := object.UnwrapReferenceValue(args[1])
 			if arr, ok := v.(*object.Array); ok {
-				return applyIndex(args[0], arr.Elements)
+				return applyIndex(args[0], arr.Elements, false)
 			}
 			return newError("native function subscript: args[1] should be Array")
 		}},
@@ -58,7 +77,12 @@ func init() {
 		}},
 		"print": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			for _, arg := range args {
-				fmt.Print(object.UnwrapReferenceValue(arg).Inspect())
+				if f, ok := env.Get("string"); ok {
+					v := applyFunction(*f, []object.Object{arg}, env)
+					fmt.Print(string(v.(*object.String).Value))
+				} else {
+					return newError("string lost")
+				}
 			}
 			return object.VoidObj
 		}},
@@ -77,7 +101,12 @@ func init() {
 				return object.VoidObj
 			}
 			for _, arg := range args {
-				fmt.Println(object.UnwrapReferenceValue(arg).Inspect())
+				if f, ok := env.Get("string"); ok {
+					v := applyFunction(*f, []object.Object{arg}, env)
+					fmt.Println(string(v.(*object.String).Value))
+				} else {
+					return newError("string lost")
+				}
 			}
 			return object.VoidObj
 		}},
@@ -378,7 +407,8 @@ func init() {
 				if export, ok := importEnv.Get("export"); ok {
 					return &object.Reference{Value: export, Const: true}
 				}
-				return newError("native function import: export obj not found")
+				return object.VoidObj
+				//return newError("native function import: export obj not found")
 			}
 			return newError("native function import: arg should be String")
 		}},
@@ -564,7 +594,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	return object.VoidObj
 }
 
-func applyIndex(ident object.Object, indexes []object.Object) object.Object {
+func applyIndex(ident object.Object, indexes []object.Object, super bool) object.Object {
 	constObj := true
 	if refer, ok := ident.(*object.Reference); ok {
 		constObj = refer.Const
@@ -617,7 +647,7 @@ func applyIndex(ident object.Object, indexes []object.Object) object.Object {
 		pair, ok := hash.Pairs[key.HashKey()]
 		hashOld := hash
 		cst := false
-		if !ok {
+		if !ok || super {
 			cst = true
 			for true {
 				var val object.HashPair
@@ -629,6 +659,10 @@ func applyIndex(ident object.Object, indexes []object.Object) object.Object {
 					break
 				}
 				if hash, ok = (object.UnwrapReferenceValue(*val.Value)).(*object.Hash); ok {
+					if super {
+						super = false
+						continue
+					}
 					pair, ok = hash.Pairs[key.HashKey()]
 					if ok {
 						break
@@ -639,6 +673,11 @@ func applyIndex(ident object.Object, indexes []object.Object) object.Object {
 			}
 		}
 		if ok {
+			refObj := pair.Value
+			if refer, ok := (*refObj).(*object.Reference); ok {
+				return &object.Reference{Value: refer.Value, Const: cst || constObj, Origin: hashOld, Index: key}
+				//return refer
+			}
 			return &object.Reference{Value: pair.Value, Const: cst || constObj, Origin: hashOld, Index: key}
 		} else {
 			return &object.Reference{Value: nil, Const: constObj, Origin: hashOld, Index: key}

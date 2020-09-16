@@ -59,7 +59,9 @@ func UnwrapReferenceValue(obj Object) Object {
 			return VoidObj
 		}
 		if fun, ok := (*referenceVal.Value).(*Function); ok {
-			fun.Env.SetCurrent("self", referenceVal.Origin)
+			fun.Env.SetCurrent("self", VoidObj)
+			o, _ := fun.Env.Get("self")
+			*o = referenceVal.Origin
 		}
 		return *referenceVal.Value
 	}

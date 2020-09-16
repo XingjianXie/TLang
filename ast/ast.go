@@ -169,7 +169,7 @@ func (js *JumpStatement) String() string {
 }
 
 type DelStatement struct {
-	Token    token.Token // the 'ret' token
+	Token    token.Token // the 'del' token
 	DelIdent Expression
 }
 
@@ -328,7 +328,7 @@ func (le *LoopExpression) String() string {
 }
 
 type LoopInExpression struct {
-	Token token.Token // The 'ref' token
+	Token token.Token // The 'loop' token
 	Name  *Identifier
 	Range Expression
 	Body  *BlockStatement

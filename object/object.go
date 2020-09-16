@@ -200,17 +200,17 @@ func (s *String) Type() Type        { return STRING }
 func (s *String) Copy() Object      { return s }
 func (s *String) LetterObj() string { return string(s.Value) }
 func (s *String) HashKey() HashKey {
-	return HashKey{Type: s.Type(), Value: s.Value}
+	return HashKey{Type: s.Type(), Value: string(s.Value)}
 }
 
 type Character struct {
-	Value *rune
+	Value rune
 }
 
-func (c *Character) Inspect() string   { return "'" + string(*c.Value) + "'" }
+func (c *Character) Inspect() string   { return "'" + string(c.Value) + "'" }
 func (c *Character) Type() Type        { return CHARACTER }
 func (c *Character) Copy() Object      { return c }
-func (c *Character) LetterObj() string { return string(*c.Value) }
+func (c *Character) LetterObj() string { return string(c.Value) }
 func (c *Character) HashKey() HashKey {
 	return HashKey{Type: c.Type(), Value: c.Value}
 }
@@ -270,7 +270,12 @@ func (r *Reference) Inspect() string {
 		out.WriteString("Const ")
 	}
 	out.WriteString("Reference: ")
-	out.WriteString((*r.Value).Inspect())
+	if r.Value != nil {
+		out.WriteString((*r.Value).Inspect())
+	} else {
+		out.WriteString("[NOT ALLOC]")
+	}
+
 
 	return out.String()
 }
@@ -330,7 +335,17 @@ func (h *Hash) Inspect() string {
 
 	return out.String()
 }
-func (h *Hash) Type() Type { return HASH }
+func (h *Hash) Type() Type {
+	if val, ok := h.Pairs[HashKey{
+		Type:  "STRING",
+		Value: "class",
+	}]; ok {
+		if str, ok := (*val.Value).(*String); ok {
+			return Type(HASH + " CLASS [" + string(str.Value) + "]")
+		}
+	}
+	return HASH
+}
 func (h *Hash) Copy() Object {
 	if h.Copyable {
 		h.Copyable = false

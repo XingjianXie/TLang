@@ -25,7 +25,7 @@ func TestEvalIntegerExpression(t *testing.T) {
 		{"2 * (5 + 10);", 30},
 		{"3 * 3 * 3 + 10;", 37},
 		{"3 * (3 * 3) + 10;", 37},
-		{"5%2;", 1},
+		{"5 % 2;", 1},
 	}
 
 	for _, tt := range tests {
@@ -38,7 +38,7 @@ func testEval(input string) object.Object {
 	l := lexer.New(input)
 	p := parser.New(l)
 	program := p.ParseProgram()
-	env := object.NewEnvironment()
+	env := object.NewEnvironment(Bases)
 
 	return Eval(program, env)
 }
@@ -384,7 +384,7 @@ func TestStringLiteral(t *testing.T) {
 		t.Fatalf("object is not String. got=%T (%+v)", evaluated, evaluated)
 	}
 
-	if str.Value != "Hello World!" {
+	if string(str.Value) != "Hello World!" {
 		t.Errorf("String has wrong value. got=%q", str.Value)
 	}
 }
@@ -412,7 +412,7 @@ func TestStringConcatenation(t *testing.T) {
 		t.Fatalf("object is not String. got=%T (%+v)", evaluated, evaluated)
 	}
 
-	if str.Value != "Hello World!" {
+	if string(str.Value) != "Hello World!" {
 		t.Errorf("String has wrong value. got=%q", str.Value)
 	}
 }
@@ -608,9 +608,9 @@ func TestHashLiterals(t *testing.T) {
 	}
 
 	expected := map[object.HashKey]int64{
-		(&object.String{Value: "one"}).HashKey():   1,
-		(&object.String{Value: "two"}).HashKey():   2,
-		(&object.String{Value: "three"}).HashKey(): 8,
+		(&object.String{Value: []rune("one")}).HashKey():   1,
+		(&object.String{Value: []rune("two")}).HashKey():   2,
+		(&object.String{Value: []rune("three")}).HashKey(): 8,
 		(&object.Integer{Value: 4}).HashKey():      4,
 		True.(*object.Boolean).HashKey():           5,
 		False.(*object.Boolean).HashKey():          6,
@@ -666,6 +666,36 @@ func TestHashIndexExpressions(t *testing.T) {
 		{
 			`{ "x": 2, "t": "z" }.x;`,
 			2,
+		},
+		{
+			`
+let @subscript = subscript;
+subscript = _ {
+    let subscript = @subscript;
+    ret if (type(value(args[0])) == "FUNCTION") {
+        call(args[0], args[1]);
+    } else {
+        call(subscript, args);
+    };
+};
+(func(a, b) { ret a + b; })[1, 2];
+`,
+			3,
+		},
+		{
+			`
+let @subscript = subscript;
+subscript = _ {
+    let subscript = @subscript;
+    ret if (type(value(args[0])) == "INTEGER") {
+        args[0] + args[1][0];
+    } else {
+        call(subscript, args);
+    };
+};
+3[4];
+`,
+			7,
 		},
 	}
 

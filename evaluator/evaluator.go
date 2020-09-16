@@ -29,276 +29,265 @@ func PrintParserErrors(out io.Writer, errors []string) {
 }
 
 func init() {
-	NativeLen = func(env *object.Environment, args []object.Object) object.Object {
-		if len(args) != 1 {
-			return newError("native function len: len(args) should be 1")
-		}
-		switch arg := unwrapReferenceValue(args[0]).(type) {
-		case *object.String:
-			return &object.Integer{Value: int64(len([]rune(arg.Value)))}
-		case *object.Array:
-			return &object.Integer{Value: int64(len(arg.Elements))}
-		default:
-			return newError("native function len: arg should be String or Array")
-		}
-	}
-	NativePrint = func(env *object.Environment, args []object.Object) object.Object {
-		for _, arg := range args {
-			fmt.Print(string(NativeString(env, []object.Object{unwrapReferenceValue(arg)}).(*object.String).Value))
-		}
-		return Void
-	}
-	NativeInput = func(env *object.Environment, args []object.Object) object.Object {
-		if len(args) != 0 {
-			return newError("native function len: len(args) should be 0")
-		}
-		var input string
-		_, _ = fmt.Scanf("%s", &input)
-
-		return &object.String{Value: []rune(input)}
-	}
-	NativePrintLine = func(env *object.Environment, args []object.Object) object.Object {
-		if len(args) == 0 {
-			fmt.Println()
+	Bases = map[string]object.Object{
+		"call": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 2 {
+				return newError("native function call: len(args) should be 2")
+			}
+			v := unwrapReferenceValue(args[1])
+			if arr, ok := v.(*object.Array); ok {
+				return applyFunction(unwrapReferenceValue(args[0]), arr.Elements, env)
+			}
+			return newError("native function subscript: args[1] should be Array")
+		}},
+		"subscript": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 2 {
+				return newError("native function subscript: len(args) should be 2")
+			}
+			v := unwrapReferenceValue(args[1])
+			if arr, ok := v.(*object.Array); ok {
+				return applyIndex(args[0], arr.Elements)
+			}
+			return newError("native function subscript: args[1] should be Array")
+		}},
+		"len": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("native function len: len(args) should be 1")
+			}
+			switch arg := unwrapReferenceValue(args[0]).(type) {
+			case *object.String:
+				return &object.Integer{Value: int64(len(arg.Value))}
+			case *object.Array:
+				return &object.Integer{Value: int64(len(arg.Elements))}
+			default:
+				return newError("native function len: arg should be String or Array")
+			}
+		}},
+		"print": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			for _, arg := range args {
+				fmt.Print(unwrapReferenceValue(arg).Inspect())
+			}
 			return Void
-		}
-		for _, arg := range args {
-			fmt.Println(string(NativeString(env, []object.Object{unwrapReferenceValue(arg)}).(*object.String).Value))
-		}
-		return Void
-	}
-	NativeInputLine = func(env *object.Environment, args []object.Object) object.Object {
-		if len(args) != 0 {
-			return newError("native function len: len(args) should be 0")
-		}
-		data, _, _ := bufio.NewReader(os.Stdin).ReadLine()
-
-		return &object.String{Value: []rune(string(data))}
-	}
-	NativeString = func(env *object.Environment, args []object.Object) object.Object {
-		if len(args) != 1 {
-			return newError("native function string: len(args) should be 1")
-		}
-		un := unwrapReferenceValue(args[0])
-		if str, ok := un.(*object.String); ok {
-			return str
-		}
-		if ch, ok := un.(*object.Character); ok {
-			return &object.String{Value: []rune{*ch.Value}}
-		}
-		return &object.String{Value: []rune(un.Inspect())}
-	}
-	NativeExit = func(env *object.Environment, args []object.Object) object.Object {
-		if len(args) != 1 && len(args) != 0 {
-			return newError("native function exit: len(args) should be 1 or 0")
-		}
-
-		if len(args) == 1 {
-			if val, ok := unwrapReferenceValue(args[0]).(*object.Integer); ok {
-				os.Exit(int(val.Value))
+		}},
+		"input": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 0 {
+				return newError("native function len: len(args) should be 0")
 			}
-			return newError("native function len: arg should be Integer")
-		}
-		os.Exit(0)
-		return Void
-	}
-	NativeEval = func(env *object.Environment, args []object.Object) object.Object {
-		if len(args) != 1 {
-			return newError("native function eval: len(args) should be 1")
-		}
+			var input string
+			_, _ = fmt.Scanf("%s", &input)
 
-		if str, ok := unwrapReferenceValue(args[0]).(*object.String); ok {
-			l := lexer.New(string(str.Value))
-			p := parser.New(l)
+			return &object.String{Value: []rune(input)}
+		}},
+		"printLine": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) == 0 {
+				fmt.Println()
+				return Void
+			}
+			for _, arg := range args {
+				fmt.Println(unwrapReferenceValue(arg).Inspect())
+			}
+			return Void
+		}},
+		"inputLine": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 0 {
+				return newError("native function len: len(args) should be 0")
+			}
+			data, _, _ := bufio.NewReader(os.Stdin).ReadLine()
 
-			program := p.ParseProgram()
-			if len(p.Errors()) != 0 {
-				PrintParserErrors(os.Stdout, p.Errors())
-				return newError("error inner eval")
+			return &object.String{Value: []rune(string(data))}
+		}},
+		"string": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("native function string: len(args) should be 1")
+			}
+			un := unwrapReferenceValue(args[0])
+			if str, ok := un.(*object.String); ok {
+				return str
+			}
+			if ch, ok := un.(*object.Character); ok {
+				return &object.String{Value: []rune{ch.Value}}
+			}
+			return &object.String{Value: []rune(un.Inspect())}
+		}},
+		"exit": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 1 && len(args) != 0 {
+				return newError("native function exit: len(args) should be 1 or 0")
 			}
 
-			return Eval(program, env)
-		}
+			if len(args) == 1 {
+				if val, ok := unwrapReferenceValue(args[0]).(*object.Integer); ok {
+					os.Exit(int(val.Value))
+				}
+				return newError("native function len: arg should be Integer")
+			}
+			os.Exit(0)
+			return Void
+		}},
+		"eval": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("native function eval: len(args) should be 1")
+			}
 
-		return newError("native function eval: args should be String")
-	}
-	NativeInt = func(env *object.Environment, args []object.Object) object.Object {
-		if len(args) != 1 {
-			return newError("native function int: len(args) should be 1")
-		}
-		switch arg := unwrapReferenceValue(args[0]).(type) {
-		case *object.String:
-			val, err := strconv.ParseInt(string(arg.Value), 10, 64)
-			if err != nil {
-				return newError("could not parse %s as integer", arg.Value)
+			if str, ok := unwrapReferenceValue(args[0]).(*object.String); ok {
+				l := lexer.New(string(str.Value))
+				p := parser.New(l)
+
+				program := p.ParseProgram()
+				if len(p.Errors()) != 0 {
+					PrintParserErrors(os.Stdout, p.Errors())
+					return newError("error inner eval")
+				}
+
+				return Eval(program, env)
 			}
-			return &object.Integer{Value: val}
-		case *object.Character:
-			val, err := strconv.ParseInt(string(*arg.Value), 10, 64)
-			if err != nil {
-				return newError("could not parse %s as integer", string(*arg.Value))
+
+			return newError("native function eval: arg should be String")
+		}},
+		"int": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("native function int: len(args) should be 1")
 			}
-			return &object.Integer{Value: val}
-		case *object.Boolean:
-			if arg.Value {
-				return &object.Integer{Value: 1}
-			} else {
+			switch arg := unwrapReferenceValue(args[0]).(type) {
+			case *object.String:
+				val, err := strconv.ParseInt(string(arg.Value), 10, 64)
+				if err != nil {
+					return newError("could not parse %s as integer", string(arg.Value))
+				}
+				return &object.Integer{Value: val}
+			case *object.Character:
+				val, err := strconv.ParseInt(string(arg.Value), 10, 64)
+				if err != nil {
+					return newError("could not parse %s as integer", string(arg.Value))
+				}
+				return &object.Integer{Value: val}
+			case *object.Boolean:
+				if arg.Value {
+					return &object.Integer{Value: 1}
+				} else {
+					return &object.Integer{Value: 0}
+				}
+			case *object.Float:
+				return &object.Integer{Value: int64(arg.Value)}
+			case *object.Integer:
+				return arg
+			case *object.Void:
 				return &object.Integer{Value: 0}
+			default:
+				return newError("native function int: arg should be String, Boolean, Number or Void")
 			}
-		case *object.Float:
-			return &object.Integer{Value: int64(arg.Value)}
-		case *object.Integer:
-			return arg
-		case *object.Void:
-			return &object.Integer{Value: 0}
-		default:
-			return newError("native function int: arg should be String, Boolean, Number or Void")
-		}
-	}
+		}},
 
-	NativeFloat = func(env *object.Environment, args []object.Object) object.Object {
-		if len(args) != 1 {
-			return newError("native function float: len(args) should be 1")
-		}
-		switch arg := unwrapReferenceValue(args[0]).(type) {
-		case *object.String:
-			val, err := strconv.ParseFloat(string(arg.Value), 64)
-			if err != nil {
-				return newError("could not parse %s as float", arg.Value)
+		"float": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("native function float: len(args) should be 1")
 			}
-			return &object.Float{Value: val}
-		case *object.Character:
-			val, err := strconv.ParseFloat(string(*arg.Value), 64)
-			if err != nil {
-				return newError("could not parse %s as float", string(*arg.Value))
-			}
-			return &object.Float{Value: val}
-		case *object.Boolean:
-			if arg.Value {
-				return &object.Float{Value: 1.}
-			} else {
-				return &object.Float{Value: 0.}
-			}
-		case *object.Integer:
-			return &object.Float{Value: float64(arg.Value)}
-		case *object.Float:
-			return arg
-		case *object.Void:
-			return &object.Float{Value: 0}
-		default:
-			return newError("native function int: arg should be String, Boolean, Number or Void")
-		}
-	}
-
-	NativeBoolean = func(env *object.Environment, args []object.Object) object.Object {
-		if len(args) != 1 {
-			return newError("native function float: len(args) should be 1")
-		}
-		return toBoolean(unwrapReferenceValue(args[0]))
-	}
-
-	NativeFetch = func(env *object.Environment, args []object.Object) object.Object {
-		if len(args) != 1 {
-			return newError("native function fetch: len(args) should be 1")
-		}
-		if err, ok := args[0].(*object.Err); ok {
-			return &object.String{Value: []rune(err.Inspect())}
-		}
-		return args[0]
-	}
-
-	NativeAppend = func(env *object.Environment, args []object.Object) object.Object {
-		if len(args) != 2 {
-			return newError("native function append: len(args) should be 2")
-		}
-		if array, ok := unwrapReferenceValue(args[0]).(*object.Array); ok {
-			return &object.Array{Elements: append(array.Elements, unwrapReferenceValue(args[1])), Copyable: true}
-		}
-		return newError("native function append: args[0] should be Array")
-	}
-
-	NativeFirst = func(env *object.Environment, args []object.Object) object.Object {
-		if len(args) != 1 {
-			return newError("native function first: len(args) should be 1")
-		}
-		if array, ok := unwrapReferenceValue(args[0]).(*object.Array); ok {
-			if len(array.Elements) == 0 {
-				return Void
-			}
-			return &object.Reference{Value: &array.Elements[0], Const: false}
-		}
-		return newError("native function first: arg should be Array")
-	}
-
-	NativeLast = func(env *object.Environment, args []object.Object) object.Object {
-		if len(args) != 1 {
-			return newError("native function fetch: len(args) should be 1")
-		}
-		if array, ok := unwrapReferenceValue(args[0]).(*object.Array); ok {
-			if len(array.Elements) == 0 {
-				return Void
-			}
-			return &object.Reference{Value: &array.Elements[len(array.Elements)-1], Const: false}
-		}
-		return newError("native function append: arg should be Array")
-	}
-
-	NativeType = func(env *object.Environment, args []object.Object) object.Object {
-		if len(args) != 1 {
-			return newError("native function type: len(args) should be 1")
-		}
-		if refer, ok := args[0].(*object.Reference); ok {
-			isConst := ""
-			if refer.Const {
-				isConst = "CONST "
-			}
-			rawType := "[NOT ALLOC]"
-			if refer.Value != nil {
-				rawType = string((*refer.Value).Type())
-			}
-			return &object.String{Value: []rune(isConst + "REFERENCE: " + rawType)}
-		}
-		return &object.String{Value: []rune(args[0].Type())}
-	}
-
-	NativeArray = func(env *object.Environment, args []object.Object) object.Object {
-		if len(args) == 1 {
-			if length, ok := unwrapReferenceValue(args[0]).(*object.Integer); ok {
-				var elem []object.Object
-				for i := int64(0); i < length.Value; i++ {
-					elem = append(elem, Void)
+			switch arg := unwrapReferenceValue(args[0]).(type) {
+			case *object.String:
+				val, err := strconv.ParseFloat(string(arg.Value), 64)
+				if err != nil {
+					return newError("could not parse %s as float", string(arg.Value))
 				}
-
-				return &object.Array{
-					Elements: elem,
-					Copyable: true,
+				return &object.Float{Value: val}
+			case *object.Character:
+				val, err := strconv.ParseFloat(string(arg.Value), 64)
+				if err != nil {
+					return newError("could not parse %s as float", string(arg.Value))
 				}
+				return &object.Float{Value: val}
+			case *object.Boolean:
+				if arg.Value {
+					return &object.Float{Value: 1.}
+				} else {
+					return &object.Float{Value: 0.}
+				}
+			case *object.Integer:
+				return &object.Float{Value: float64(arg.Value)}
+			case *object.Float:
+				return arg
+			case *object.Void:
+				return &object.Float{Value: 0}
+			default:
+				return newError("native function int: arg should be String, Boolean, Number or Void")
 			}
-			return newError("native function array: args[0] should be Integer")
-		} else if len(args) == 2 {
-			if length, ok := unwrapReferenceValue(args[0]).(*object.Integer); ok {
-				var elem []object.Object
-				for i := int64(0); i < length.Value; i++ {
-					elem = append(elem, unwrapReferenceValue(args[1]))
-				}
+		}},
 
-				return &object.Array{
-					Elements: elem,
-					Copyable: true,
-				}
+		"boolean": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("native function boolean: len(args) should be 1")
 			}
-			return newError("native function array: args[0] should be Integer")
-		} else if len(args) == 3 {
-			if length, ok := unwrapReferenceValue(args[0]).(*object.Integer); ok {
-				if function, ok := unwrapReferenceValue(args[2]).(object.LikeFunction); ok {
+			return toBoolean(unwrapReferenceValue(args[0]))
+		}},
+
+		"fetch": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("native function fetch: len(args) should be 1")
+			}
+			if err, ok := args[0].(*object.Err); ok {
+				return &object.String{Value: []rune(err.Inspect())}
+			}
+			return args[0]
+		}},
+
+		"append": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 2 {
+				return newError("native function append: len(args) should be 2")
+			}
+			if array, ok := unwrapReferenceValue(args[0]).(*object.Array); ok {
+				return &object.Array{Elements: append(array.Elements, unwrapReferenceValue(args[1])), Copyable: true}
+			}
+			return newError("native function append: args[0] should be Array")
+		}},
+
+		"first": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("native function first: len(args) should be 1")
+			}
+			if array, ok := unwrapReferenceValue(args[0]).(*object.Array); ok {
+				if len(array.Elements) == 0 {
+					return Void
+				}
+				return &object.Reference{Value: &array.Elements[0], Const: false}
+			}
+			return newError("native function first: arg should be Array")
+		}},
+
+		"last": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("native function fetch: len(args) should be 1")
+			}
+			if array, ok := unwrapReferenceValue(args[0]).(*object.Array); ok {
+				if len(array.Elements) == 0 {
+					return Void
+				}
+				return &object.Reference{Value: &array.Elements[len(array.Elements)-1], Const: false}
+			}
+			return newError("native function append: arg should be Array")
+		}},
+
+		"type": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("native function type: len(args) should be 1")
+			}
+			if refer, ok := args[0].(*object.Reference); ok {
+				isConst := ""
+				if refer.Const {
+					isConst = "CONST "
+				}
+				rawType := "[NOT ALLOC]"
+				if refer.Value != nil {
+					rawType = string((*refer.Value).Type())
+				}
+				return &object.String{Value: []rune(isConst + "REFERENCE: " + rawType)}
+			}
+			return &object.String{Value: []rune(args[0].Type())}
+		}},
+
+		"array": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) == 1 {
+				if length, ok := unwrapReferenceValue(args[0]).(*object.Integer); ok {
 					var elem []object.Object
-					e := unwrapReferenceValue(args[1])
 					for i := int64(0); i < length.Value; i++ {
-						e = unwrapReferenceValue(applyFunction(function, []object.Object{&object.Integer{Value: i}, e}, env))
-						if isError(e) {
-							return e
-						}
-						elem = append(elem, e)
+						elem = append(elem, Void)
 					}
 
 					return &object.Array{
@@ -306,106 +295,100 @@ func init() {
 						Copyable: true,
 					}
 				}
-				return newError("native function array: args[2] should be Function")
+				return newError("native function array: args[0] should be Integer")
+			} else if len(args) == 2 {
+				if length, ok := unwrapReferenceValue(args[0]).(*object.Integer); ok {
+					var elem []object.Object
+					for i := int64(0); i < length.Value; i++ {
+						elem = append(elem, unwrapReferenceValue(args[1]))
+					}
+
+					return &object.Array{
+						Elements: elem,
+						Copyable: true,
+					}
+				}
+				return newError("native function array: args[0] should be Integer")
+			} else if len(args) == 3 {
+				if length, ok := unwrapReferenceValue(args[0]).(*object.Integer); ok {
+					if function, ok := unwrapReferenceValue(args[2]).(object.LikeFunction); ok {
+						var elem []object.Object
+						e := unwrapReferenceValue(args[1])
+						for i := int64(0); i < length.Value; i++ {
+							e = unwrapReferenceValue(applyFunction(function, []object.Object{&object.Integer{Value: i}, e}, env))
+							if isError(e) {
+								return e
+							}
+							elem = append(elem, e)
+						}
+
+						return &object.Array{
+							Elements: elem,
+							Copyable: true,
+						}
+					}
+					return newError("native function array: args[2] should be Function")
+				}
+				return newError("native function array: args[0] should be Integer")
 			}
-			return newError("native function array: args[0] should be Integer")
-		}
-		return newError("native function array: len(args) should be 1, 2 or 3")
-	}
+			return newError("native function array: len(args) should be 1, 2 or 3")
+		}},
 
-	NativeValue = func(env *object.Environment, args []object.Object) object.Object {
-		if len(args) != 1 {
-			return newError("native function value: len(args) should be 1")
-		}
-		return unwrapReferenceValue(args[0])
-	}
-
-	NativeEcho = func(env *object.Environment, args []object.Object) object.Object {
-		if len(args) != 1 {
-			return newError("native function echo: len(args) should be 1")
-		}
-		return args[0]
-	}
-
-	NativeImport = func(env *object.Environment, args []object.Object) object.Object {
-		if len(args) != 1 {
-			return newError("native function import: len(args) should be 1")
-		}
-		if str, ok := unwrapReferenceValue(args[0]).(*object.String); ok {
-			data, err := ioutil.ReadFile(string(str.Value))
-			if err != nil {
-				return newError("unable to read file %s: %s", str.Value, err.Error())
+		"value": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("native function value: len(args) should be 1")
 			}
-			l := lexer.New(string(data))
-			p := parser.New(l)
+			return unwrapReferenceValue(args[0])
+		}},
 
-			program := p.ParseProgram()
-			if len(p.Errors()) != 0 {
-				PrintParserErrors(os.Stdout, p.Errors())
-				return newError("error inner import")
+		"echo": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("native function echo: len(args) should be 1")
 			}
+			return args[0]
+		}},
 
-			importEnv := object.NewEnvironment()
-			result := Eval(program, importEnv)
-			if isError(result) {
-				return result
+		"error": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("native function error: len(args) should be 1")
 			}
-			if export, ok := importEnv.Get("export"); ok {
-				return &object.Reference{Value: export, Const: true}
-			}
-			return newError("native function import: export obj not found")
-		}
-		return newError("native function import: arg should be String")
-	}
+			return newError(args[0].Inspect())
+		}},
 
-	natives = map[string]*object.Native{
-		"len":       {NativeLen},
-		"print":     {NativePrint},
-		"input":     {NativeInput},
-		"printLine": {NativePrintLine},
-		"inputLine": {NativeInputLine},
-		"string":    {NativeString},
-		"exit":      {NativeExit},
-		"eval":      {NativeEval},
-		"int":       {NativeInt},
-		"float":     {NativeFloat},
-		"boolean":   {NativeBoolean},
-		"fetch":     {NativeFetch},
-		"append":    {NativeAppend},
-		"first":     {NativeFirst},
-		"last":      {NativeLast},
-		"type":      {NativeType},
-		"array":     {NativeArray},
-		"value":     {NativeValue},
-		"echo":      {NativeEcho},
-		"import":    {NativeImport},
+		"import": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("native function import: len(args) should be 1")
+			}
+			if str, ok := unwrapReferenceValue(args[0]).(*object.String); ok {
+				data, err := ioutil.ReadFile(string(str.Value))
+				if err != nil {
+					return newError("unable to read file %s: %s", string(str.Value), err.Error())
+				}
+				l := lexer.New(string(data))
+				p := parser.New(l)
+
+				program := p.ParseProgram()
+				if len(p.Errors()) != 0 {
+					PrintParserErrors(os.Stdout, p.Errors())
+					return newError("error inner import")
+				}
+
+				importEnv := object.NewEnvironment(Bases)
+				result := Eval(program, importEnv)
+				if isError(result) {
+					return result
+				}
+				if export, ok := importEnv.Get("export"); ok {
+					return &object.Reference{Value: export, Const: true}
+				}
+				return newError("native function import: export obj not found")
+			}
+			return newError("native function import: arg should be String")
+		}},
 	}
 }
 
-var (
-	NativeLen       func(env *object.Environment, args []object.Object) object.Object
-	NativePrint     func(env *object.Environment, args []object.Object) object.Object
-	NativePrintLine func(env *object.Environment, args []object.Object) object.Object
-	NativeInput     func(env *object.Environment, args []object.Object) object.Object
-	NativeInputLine func(env *object.Environment, args []object.Object) object.Object
-	NativeString    func(env *object.Environment, args []object.Object) object.Object
-	NativeExit      func(env *object.Environment, args []object.Object) object.Object
-	NativeEval      func(env *object.Environment, args []object.Object) object.Object
-	NativeInt       func(env *object.Environment, args []object.Object) object.Object
-	NativeFloat     func(env *object.Environment, args []object.Object) object.Object
-	NativeBoolean   func(env *object.Environment, args []object.Object) object.Object
-	NativeFetch     func(env *object.Environment, args []object.Object) object.Object
-	NativeAppend    func(env *object.Environment, args []object.Object) object.Object
-	NativeFirst     func(env *object.Environment, args []object.Object) object.Object
-	NativeLast      func(env *object.Environment, args []object.Object) object.Object
-	NativeType      func(env *object.Environment, args []object.Object) object.Object
-	NativeArray     func(env *object.Environment, args []object.Object) object.Object
-	NativeValue     func(env *object.Environment, args []object.Object) object.Object
-	NativeEcho      func(env *object.Environment, args []object.Object) object.Object
-	NativeImport    func(env *object.Environment, args []object.Object) object.Object
-)
-
-var natives map[string]*object.Native
+var Bases map[string]object.Object
 
 func newError(format string, a ...interface{}) *object.Err {
 	return &object.Err{Message: fmt.Sprintf(format, a...)}
@@ -438,7 +421,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.StringLiteral:
 		return &object.String{Value: []rune(node.Value)}
 	case *ast.CharacterLiteral:
-		return &object.Character{Value: &node.Value}
+		return &object.Character{Value: node.Value}
 	case *ast.BooleanLiteral:
 		return nativeBoolToBooleanObject(node.Value)
 	case *ast.Identifier:
@@ -492,7 +475,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 		args := evalExpressions(node.Arguments, env, false)
 		if len(args) == 1 && isError(args[0]) {
-			if function != natives["fetch"] {
+			if function != Bases["fetch"] {
 				return args[0]
 			}
 		}
@@ -507,15 +490,20 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		if len(indexes) == 1 && isError(indexes[0]) {
 			return indexes[0]
 		}
-
-		return applyIndex(ident, indexes)
+		if f, ok := env.Get("subscript"); ok {
+			return applyFunction(*f, []object.Object{ident, &object.Array{Elements: indexes}}, env)
+		}
+		return newError("subscript lost")
 	case *ast.DotExpression:
 		left := Eval(node.Left, env)
 		if isError(left) {
 			return left
 		}
 		if str, ok := node.Right.(*ast.Identifier); ok {
-			return applyIndex(left, []object.Object{&object.String{Value: []rune(str.Value)}})
+			if f, ok := env.Get("subscript"); ok {
+				return applyFunction(*f, []object.Object{left, &object.Array{Elements: []object.Object{&object.String{Value: []rune(str.Value)}}}}, env)
+			}
+			return newError("subscript lost")
 		}
 		return newError("Not a key: %s", node.Right.String())
 
@@ -617,9 +605,10 @@ func applyIndex(ident object.Object, indexes []object.Object) object.Object {
 		if index >= length || index < 0 {
 			return newError("string: out of range")
 		}
-		//return &object.Character{Value: runeStr[index]}
-		var refObj object.Object = &object.Character{Value: &str.Value[index]}
-		return &object.Reference{Value: &refObj, Const: constObj}
+		var c object.Object = &object.Character{Value: str.Value[index]}
+		return &object.Reference{Value: &c, Const: true}
+		//var refObj object.Object = &object.Character{Value: &str.Value[index]}
+		//return &object.Reference{Value: &refObj, Const: constObj}
 	}
 	if hash, ok := ident.(*object.Hash); ok {
 		if len(indexes) != 1 {
@@ -758,10 +747,6 @@ func evalIdentifier(
 		}
 	}
 
-	if native, ok := natives[node.Value]; ok {
-		return native
-	}
-
 	return newError("identifier not found: " + node.Value)
 }
 
@@ -898,12 +883,6 @@ func evalAssignExpression(node *ast.AssignExpression, env *object.Environment) o
 		}
 		if isError(newVal) {
 			return newVal
-		}
-		if chL, ok := (*refer.Value).(*object.Character); ok {
-			if chR, ok := newVal.(*object.Character); ok {
-				*chL.Value = *chR.Value
-				return chR
-			}
 		}
 		*refer.Value = newVal
 		return newVal
@@ -1214,28 +1193,39 @@ func evalLoopInExpression(le *ast.LoopInExpression, env *object.Environment) obj
 	if isError(loopRange) {
 		return loopRange
 	}
-	length := NativeLen(env, []object.Object{loopRange})
-	if isError(length) {
-		return length
+
+	if f, ok := env.Get("len"); ok {
+		length := applyFunction(*f, []object.Object{loopRange}, env)
+		if isError(length) {
+			return length
+		}
+
+		if f, ok := env.Get("subscript"); ok {
+			for i := int64(0); i < length.(*object.Integer).Value; i++ {
+				newEnv := env.NewEnclosedEnvironment()
+				v := applyFunction(*f, []object.Object{loopRange, &object.Array{Elements: []object.Object{&object.Integer{Value: i}}}}, env)
+				if isError(v) {
+					return v
+				}
+				newEnv.SetCurrent(le.Name.Value, v)
+				newResult := Eval(le.Body, newEnv)
+				if isError(newResult) || newResult.Type() == object.RET {
+					return newResult
+				}
+
+				if newResult.Type() == object.OUT {
+					return unwrapOutValue(newResult)
+				}
+
+				if newResult.Type() != object.JUMP {
+					result = newResult
+				}
+			}
+			return result
+		}
+		return newError("subscript lost")
 	}
-
-	for i := int64(0); i < length.(*object.Integer).Value; i++ {
-		newEnv := env.NewEnclosedEnvironment()
-		newEnv.SetCurrent(le.Name.Value, applyIndex(loopRange, []object.Object{&object.Integer{Value: i}}))
-		newResult := Eval(le.Body, newEnv)
-		if isError(newResult) || newResult.Type() == object.RET {
-			return newResult
-		}
-
-		if newResult.Type() == object.OUT {
-			return unwrapOutValue(newResult)
-		}
-
-		if newResult.Type() != object.JUMP {
-			result = newResult
-		}
-	}
-	return result
+	return newError("len")
 }
 
 func isTruthy(obj object.Object) bool {

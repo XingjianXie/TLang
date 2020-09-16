@@ -1,14 +1,24 @@
 package object
 
 func (e *Environment) NewEnclosedEnvironment() *Environment {
-	env := NewEnvironment()
+	env := newEnvironment()
 	env.outer = e
 	return env
 }
 
-func NewEnvironment() *Environment {
+func newEnvironment() *Environment {
 	s := make(map[string]*Object)
 	return &Environment{store: s, outer: nil}
+}
+
+func NewEnvironment(bases map[string]Object) *Environment {
+	o := newEnvironment()
+	for s, base := range bases {
+		o.SetCurrent(s, base)
+	}
+
+	s := make(map[string]*Object)
+	return &Environment{store: s, outer: o}
 }
 
 type Environment struct {
@@ -52,7 +62,7 @@ func (e *Environment) DeAlloc(Index Object) bool {
 			return true
 		}
 		if !ok && e.outer != nil {
-			e.outer.DeAlloc(envIndex)
+			return e.outer.DeAlloc(envIndex)
 		}
 	}
 	return false

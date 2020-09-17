@@ -27,31 +27,20 @@ func init() {
 			if len(args) != 2 {
 				return newError("native function super: len(args) should be 2")
 			}
-			return applyIndex(args[0], []object.Object{args[1]}, true)
+			return applyIndex(args[0], []object.Object{args[1]}, Super)
 		}},
-		"override": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
-			if len(args) != 3 {
-				return newError("native function override: len(args) should be 3")
+		"current": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 2 {
+				return newError("native function current: len(args) should be 2")
 			}
-			if h, ok := object.UnwrapReferenceValue(args[0]).(*object.Hash); ok {
-				if key, ok := object.UnwrapReferenceValue(args[1]).(object.HashAble); ok {
-					h.Pairs[key.HashKey()] = object.HashPair{Key: key, Value: &args[2]}
-					return args[2]
-				}
-				return newError("native function override: args[1] should be HashAble")
-			}
-			return newError("native function override: args[0] should be Hash")
+			return applyIndex(args[0], []object.Object{args[1]}, Current)
 		}},
-		"instance": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		"classType": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 1 {
 				return newError("native function instance: len(args) should be 1")
 			}
 			if h, ok := object.UnwrapReferenceValue(args[0]).(*object.Hash); ok {
-				_, ok := h.Pairs[object.HashKey{
-					Type:  "String",
-					Value: "@class",
-				}]
-				return nativeBoolToBooleanObject(!ok)
+				return &object.String{Value: []rune(classType(h))}
 			}
 			return newError("native function instance: arg should be Hash")
 		}},
@@ -71,7 +60,7 @@ func init() {
 			}
 			v := object.UnwrapReferenceValue(args[1])
 			if arr, ok := v.(*object.Array); ok {
-				return applyIndex(args[0], arr.Elements, false)
+				return applyIndex(args[0], arr.Elements, Default)
 			}
 			return newError("native function subscript: args[1] should be Array")
 		}},
@@ -607,7 +596,49 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	return object.VoidObj
 }
 
-func applyIndex(ident object.Object, indexes []object.Object, super bool) object.Object {
+type classFlag int
+const (
+	_ classFlag = iota
+	Default
+	Current
+	Super
+)
+
+func classType(hash *object.Hash) string {
+	c, hasClass := hash.Pairs[object.HashKey{
+		Type:  "String",
+		Value: "@class",
+	}]
+	if hasClass {
+		_, hasClass = (*c.Value).(*object.String)
+	}
+	t, hasTemplate := hash.Pairs[object.HashKey{
+		Type:  "String",
+		Value: "@template",
+	}]
+	if hasTemplate {
+		_, hasTemplate = (object.UnwrapReferenceValue(*t.Value)).(*object.Hash)
+	}
+	switch {
+	case hasClass:
+		return "Proto"
+	case !hasClass && hasTemplate:
+		return "Instance"
+	default:
+		return ""
+	}
+}
+
+func template(hash *object.Hash) (*object.Hash, bool) {
+	if t, ok := hash.Pairs[object.HashKey{Type: "String", Value: "@template"}]; ok {
+		if h, ok := (object.UnwrapReferenceValue(*t.Value)).(*object.Hash); ok {
+			return h, true
+		}
+	}
+	return nil, false
+}
+
+func applyIndex(ident object.Object, indexes []object.Object, flag classFlag) object.Object {
 	constObj := true
 	if refer, ok := ident.(*object.Reference); ok {
 		constObj = refer.Const
@@ -659,39 +690,37 @@ func applyIndex(ident object.Object, indexes []object.Object, super bool) object
 		}
 		pair, ok := hash.Pairs[key.HashKey()]
 		hashOld := hash
-		cst := false
-		if !ok || super {
-			cst = true
-			for true {
-				var val object.HashPair
-				val, ok = hash.Pairs[object.HashKey{
-					Type:  "String",
-					Value: "@template",
-				}]
-				if !ok {
+		preserveConst := false
+
+		if !ok && classType(hash) == "Instance" {
+			preserveConst = true
+			hash, _ = template(hash)
+			pair, ok = hash.Pairs[key.HashKey()]
+		}
+
+		if flag == Super {
+			ok = false
+		}
+
+		if !ok {
+			preserveConst = true
+			for flag != Current {
+				if hash, ok = template(hash); !ok {
 					break
 				}
-				if hash, ok = (object.UnwrapReferenceValue(*val.Value)).(*object.Hash); ok {
-					if super {
-						super = false
-						continue
-					}
-					pair, ok = hash.Pairs[key.HashKey()]
-					if ok {
-						break
-					}
-				} else {
+				if pair, ok = hash.Pairs[key.HashKey()]; ok {
 					break
 				}
 			}
 		}
+
 		if ok {
 			refObj := pair.Value
 			if refer, ok := (*refObj).(*object.Reference); ok {
-				return &object.Reference{Value: refer.Value, Const: cst || constObj, Origin: hashOld, Index: key}
+				return &object.Reference{Value: refer.Value, Const: preserveConst || constObj, Origin: hashOld, Index: key}
 				//return refer
 			}
-			return &object.Reference{Value: pair.Value, Const: cst || constObj, Origin: hashOld, Index: key}
+			return &object.Reference{Value: pair.Value, Const: preserveConst || constObj, Origin: hashOld, Index: key}
 		} else {
 			return &object.Reference{Value: nil, Const: constObj, Origin: hashOld, Index: key}
 		}

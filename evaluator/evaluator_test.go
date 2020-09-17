@@ -668,6 +668,14 @@ func TestHashIndexExpressions(t *testing.T) {
 			2,
 		},
 		{
+			`let c={"@template":{"@class":"1","@template":{"@class":"0","x":1}}};current(c,"x")=2;super(c,"x");`,
+			1,
+		},
+		{
+			`let c = {"@template":{"@class":"1","@template":{"@class":"0","x":1}}}; current(c, "x") = 2; c.x;`,
+			2,
+		},
+		{
 			`
 let @subscript = subscript;
 subscript = _ {
@@ -696,6 +704,42 @@ subscript = _ {
 3[4];
 `,
 			7,
+		},
+		{
+			`
+let Person = {
+	"@class": "Person",
+	"getInfo": func(self) {
+		if (classType(self) != "Instance") {
+			error("Class Type");
+		};
+		let str = "";
+		str += "Class Name: " + self.@class + "\n";
+		str += "Person Name: " + self.name + "\n";
+	}
+};
+
+let Student = {
+	"@class": "Student",
+	"@template": Person,
+	"getInfo": func(self) {
+		let str = "";
+		str += super(self, "getInfo")();
+		str += "School Name: " + self.school + "\n";
+	}
+};
+
+let c = {
+	"@template": Student,
+	"name": "Mark",
+	"school": "CNU High School",
+};
+
+if (c.getInfo() != "Class Name: Student\nPerson Name: Mark\nSchool Name: CNU High School\n") {
+	error("");
+};
+`,
+			nil,
 		},
 	}
 

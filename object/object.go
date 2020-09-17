@@ -18,23 +18,23 @@ var (
 )
 
 const (
-	INTEGER   = "INTEGER"
-	FLOAT     = "FLOAT"
-	BOOLEAN   = "BOOLEAN"
-	STRING    = "STRING"
-	CHARACTER = "CHARACTER"
-	VOID      = "VOID"
-	RET       = "RET"
-	OUT       = "OUT"
-	JUMP      = "JUMP"
-	ERR       = "ERR"
-	FUNCTION  = "FUNCTION"
-	UNDERLINE = "UNDERLINE"
-	NATIVE    = "NATIVE"
-	ARRAY     = "ARRAY"
-	REFERENCE = "REFERENCE"
-	HASH      = "HASH"
-	ENVIRONMENT = "ENVIRONMENT"
+	INTEGER     = "Integer"
+	FLOAT       = "Float"
+	BOOLEAN     = "Boolean"
+	STRING      = "String"
+	CHARACTER   = "Character"
+	VOID        = "Void"
+	RET         = "Ret"
+	OUT         = "Out"
+	JUMP        = "Jump"
+	ERR         = "Err"
+	FUNC        = "Func"
+	UNDERLINE   = "Underline"
+	NATIVE      = "Native"
+	ARRAY       = "Array"
+	REFERENCE   = "Reference"
+	HASH        = "Hash"
+	ENVIRONMENT = "Environment"
 )
 
 func UnwrapRetValue(obj Object) Object {
@@ -59,9 +59,7 @@ func UnwrapReferenceValue(obj Object) Object {
 			return VoidObj
 		}
 		if fun, ok := (*referenceVal.Value).(*Function); ok {
-			fun.Env.SetCurrent("self", VoidObj)
-			o, _ := fun.Env.Get("self")
-			*o = referenceVal.Origin
+			fun.Self = referenceVal.Origin
 		}
 		return *referenceVal.Value
 	}
@@ -84,7 +82,7 @@ type Letter interface {
 	LetterObj() string
 }
 
-type LikeFunction interface {
+type Functor interface {
 	Object
 	LikeFunctionObj()
 }
@@ -192,6 +190,7 @@ type Function struct {
 	Parameters []*ast.Identifier
 	Body       *ast.BlockStatement
 	Env        *Environment
+	Self       Object
 }
 
 func (f *Function) Inspect() string {
@@ -210,7 +209,7 @@ func (f *Function) Inspect() string {
 
 	return out.String()
 }
-func (f *Function) Type() Type       { return FUNCTION }
+func (f *Function) Type() Type       { return FUNC }
 func (f *Function) Copy() Object     { return f }
 func (f *Function) LikeFunctionObj() {}
 
@@ -309,11 +308,11 @@ func (r *Reference) Inspect() string {
 	if r.Const {
 		out.WriteString("Const ")
 	}
-	out.WriteString("Reference: ")
+	out.WriteString("Reference ")
 	if r.Value != nil {
-		out.WriteString((*r.Value).Inspect())
+		out.WriteString("(" + (*r.Value).Inspect() + ")")
 	} else {
-		out.WriteString("[NOT ALLOC]")
+		out.WriteString("(Not Alloc)")
 	}
 
 

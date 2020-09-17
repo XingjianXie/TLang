@@ -240,27 +240,27 @@ func TestErrorHandling(t *testing.T) {
 	}{
 		{
 			"5 + true;",
-			"type mismatch: INTEGER + BOOLEAN",
+			"type mismatch: Integer + Boolean",
 		},
 		{
 			"5 + true; 5;",
-			"type mismatch: INTEGER + BOOLEAN",
+			"type mismatch: Integer + Boolean",
 		},
 		{
 			"-true;",
-			"unknown operator: -BOOLEAN",
+			"unknown operator: -Boolean",
 		},
 		{
 			"true + false;",
-			"unknown operator: BOOLEAN + BOOLEAN",
+			"unknown operator: Boolean + Boolean",
 		},
 		{
 			"5; true + false; 5;",
-			"unknown operator: BOOLEAN + BOOLEAN",
+			"unknown operator: Boolean + Boolean",
 		},
 		{
 			"if (10 > 1) { true + false; };",
-			"unknown operator: BOOLEAN + BOOLEAN",
+			"unknown operator: Boolean + Boolean",
 		},
 		{
 			"foobar;",
@@ -276,7 +276,7 @@ if (10 > 1) {
   ret 1;
 };
 `,
-			"unknown operator: BOOLEAN + BOOLEAN",
+			"unknown operator: Boolean + Boolean",
 		},
 	}
 
@@ -422,13 +422,13 @@ func TestConvertFunctions(t *testing.T) {
 		input    string
 		expected int64
 	}{
-		{"int(\"123\");", 123},
-		{"int(float(\"123.3\"));", 123},
-		{"int(float(\"123.222\"));", 123},
-		{"int(float(\"122.9\"));", 122},
-		{"int(string(int(\"123\") + 4) + \"2\");", 1272},
-		{"int(boolean(1));", 1},
-		{"int(boolean(float(\"Nan\")));", 0},
+		{"integer(\"123\");", 123},
+		{"integer(float(\"123.3\"));", 123},
+		{"integer(float(\"123.222\"));", 123},
+		{"integer(float(\"122.9\"));", 122},
+		{"integer(string(integer(\"123\") + 4) + \"2\");", 1272},
+		{"integer(boolean(1));", 1},
+		{"integer(boolean(float(\"Nan\")));", 0},
 	}
 
 	for _, tt := range tests {
@@ -577,12 +577,12 @@ func TestReference(t *testing.T) {
 		{"let x = 0; func(a, b) { a = 3 + b; } (x, 5); x;", 8},
 
 		{"let x = 0; func() { x = 4; }(); x;", 4},
-		{"let x = 0; ref y = x; func() { y = 4; }(); int(y == x and x == 4);", 1},
+		{"let x = 0; ref y = x; func() { y = 4; }(); integer(y == x and x == 4);", 1},
 		{"let a = 0; ref b = a; func(t) { t = 5; }(a); b;", 5},
 
 		{"let a = { 1:2, 3:4, 5:6 }; a[1] = 4; a[1];", 4},
 		{"let a = { 1:2, 3:4, 5: 6}; ref b = a[1]; b = 4; a[1];", 4},
-		{"let a = { 1:2, \"1\":3 }; int(a[1] == 2 and a[string(1)] == 3);", 1},
+		{"let a = { 1:2, \"1\":3 }; integer(a[1] == 2 and a[string(1)] == 3);", 1},
 	}
 
 	for _, tt := range tests {
@@ -672,7 +672,7 @@ func TestHashIndexExpressions(t *testing.T) {
 let @subscript = subscript;
 subscript = _ {
     let subscript = @subscript;
-    ret if (type(value(args[0])) == "FUNCTION") {
+    ret if (type(value(args[0])) == "Func") {
         call(args[0], args[1]);
     } else {
         call(subscript, args);
@@ -687,7 +687,7 @@ subscript = _ {
 let @subscript = subscript;
 subscript = _ {
     let subscript = @subscript;
-    ret if (type(value(args[0])) == "INTEGER") {
+    ret if (type(value(args[0])) == "Integer") {
         args[0] + args[1][0];
     } else {
         call(subscript, args);

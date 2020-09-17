@@ -42,6 +42,19 @@ func init() {
 			}
 			return newError("native function override: args[0] should be Hash")
 		}},
+		"instance": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("native function instance: len(args) should be 1")
+			}
+			if h, ok := object.UnwrapReferenceValue(args[0]).(*object.Hash); ok {
+				_, ok := h.Pairs[object.HashKey{
+					Type:  "String",
+					Value: "@class",
+				}]
+				return nativeBoolToBooleanObject(!ok)
+			}
+			return newError("native function instance: arg should be Hash")
+		}},
 		"call": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 2 {
 				return newError("native function call: len(args) should be 2")
@@ -88,7 +101,7 @@ func init() {
 		}},
 		"input": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 0 {
-				return newError("native function len: len(args) should be 0")
+				return newError("native function input: len(args) should be 0")
 			}
 			var input string
 			_, _ = fmt.Scanf("%s", &input)
@@ -112,7 +125,7 @@ func init() {
 		}},
 		"inputLine": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 0 {
-				return newError("native function len: len(args) should be 0")
+				return newError("native function inputLine: len(args) should be 0")
 			}
 			data, _, _ := bufio.NewReader(os.Stdin).ReadLine()
 
@@ -140,7 +153,7 @@ func init() {
 				if val, ok := object.UnwrapReferenceValue(args[0]).(*object.Integer); ok {
 					os.Exit(int(val.Value))
 				}
-				return newError("native function len: arg should be Integer")
+				return newError("native function exit: arg should be Integer")
 			}
 			os.Exit(0)
 			return object.VoidObj
@@ -165,7 +178,7 @@ func init() {
 
 			return newError("native function eval: arg should be String")
 		}},
-		"int": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		"integer": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 1 {
 				return newError("native function int: len(args) should be 1")
 			}
@@ -195,7 +208,7 @@ func init() {
 			case *object.Void:
 				return &object.Integer{Value: 0}
 			default:
-				return newError("native function int: arg should be String, Boolean, Number or object.VoidObj")
+				return newError("native function integer: arg should be String, Boolean, Number or object.VoidObj")
 			}
 		}},
 
@@ -293,13 +306,13 @@ func init() {
 			if refer, ok := args[0].(*object.Reference); ok {
 				isConst := ""
 				if refer.Const {
-					isConst = "CONST "
+					isConst = "Const "
 				}
-				rawType := "[NOT ALLOC]"
+				rawType := "Not Alloc"
 				if refer.Value != nil {
 					rawType = string((*refer.Value).Type())
 				}
-				return &object.String{Value: []rune(isConst + "REFERENCE: " + rawType)}
+				return &object.String{Value: []rune(isConst + "Reference (" + rawType + ")")}
 			}
 			return &object.String{Value: []rune(args[0].Type())}
 		}},
@@ -333,7 +346,7 @@ func init() {
 				return newError("native function array: args[0] should be Integer")
 			} else if len(args) == 3 {
 				if length, ok := object.UnwrapReferenceValue(args[0]).(*object.Integer); ok {
-					if function, ok := object.UnwrapReferenceValue(args[2]).(object.LikeFunction); ok {
+					if function, ok := object.UnwrapReferenceValue(args[2]).(object.Functor); ok {
 						var elem []object.Object
 						e := object.UnwrapReferenceValue(args[1])
 						for i := int64(0); i < length.Value; i++ {
@@ -349,7 +362,7 @@ func init() {
 							Copyable: true,
 						}
 					}
-					return newError("native function array: args[2] should be Function")
+					return newError("native function array: args[2] should be Functor")
 				}
 				return newError("native function array: args[0] should be Integer")
 			}
@@ -652,7 +665,7 @@ func applyIndex(ident object.Object, indexes []object.Object, super bool) object
 			for true {
 				var val object.HashPair
 				val, ok = hash.Pairs[object.HashKey{
-					Type:  "STRING",
+					Type:  "String",
 					Value: "@template",
 				}]
 				if !ok {
@@ -721,6 +734,13 @@ func extendFunctionEnv(
 	args []object.Object,
 ) *object.Environment {
 	env := fn.Env.NewEnclosedEnvironment()
+
+	l := len(fn.Parameters)
+	if l != 0 {
+		if fn.Parameters[l - 1].Value == "self" {
+			args = append(args, &object.Reference{Value: &fn.Self, Const: true})
+		}
+	}
 
 	for paramIdx, param := range fn.Parameters {
 		if paramIdx >= len(args) {

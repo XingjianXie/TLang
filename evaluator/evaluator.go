@@ -37,12 +37,12 @@ func init() {
 		}},
 		"classType": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 1 {
-				return newError("native function instance: len(args) should be 1")
+				return newError("native function classType: len(args) should be 1")
 			}
 			if h, ok := object.UnwrapReferenceValue(args[0]).(*object.Hash); ok {
 				return &object.String{Value: []rune(classType(h))}
 			}
-			return newError("native function instance: arg should be Hash")
+			return newError("native function classType: arg should be Hash")
 		}},
 		"call": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 2 {
@@ -80,8 +80,8 @@ func init() {
 		"print": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			for _, arg := range args {
 				if f, ok := env.Get("string"); ok {
-					v := applyFunction(*f, []object.Object{arg}, env)
-					fmt.Print(string(v.(*object.String).Value))
+					v := applyFunction(object.UnwrapReferenceValue(*f), []object.Object{arg}, env)
+					fmt.Print(string(object.UnwrapReferenceValue(v).(*object.String).Value))
 				} else {
 					return newError("string lost")
 				}
@@ -104,8 +104,8 @@ func init() {
 			}
 			for _, arg := range args {
 				if f, ok := env.Get("string"); ok {
-					v := applyFunction(*f, []object.Object{arg}, env)
-					fmt.Println(string(v.(*object.String).Value))
+					v := applyFunction(object.UnwrapReferenceValue(*f), []object.Object{arg}, env)
+					fmt.Println(string(object.UnwrapReferenceValue(v).(*object.String).Value))
 				} else {
 					return newError("string lost")
 				}
@@ -520,7 +520,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			return indexes[0]
 		}
 		if f, ok := env.Get("subscript"); ok {
-			return applyFunction(*f, []object.Object{ident, &object.Array{Elements: indexes}}, env)
+			return applyFunction(object.UnwrapReferenceValue(*f), []object.Object{ident, &object.Array{Elements: indexes}}, env)
 		}
 		return newError("subscript lost")
 	case *ast.DotExpression:
@@ -530,7 +530,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 		if str, ok := node.Right.(*ast.Identifier); ok {
 			if f, ok := env.Get("subscript"); ok {
-				return applyFunction(*f, []object.Object{left, &object.Array{Elements: []object.Object{&object.String{Value: []rune(str.Value)}}}}, env)
+				return applyFunction(object.UnwrapReferenceValue(*f), []object.Object{left, &object.Array{Elements: []object.Object{&object.String{Value: []rune(str.Value)}}}}, env)
 			}
 			return newError("subscript lost")
 		}
@@ -1273,7 +1273,7 @@ func evalLoopInExpression(le *ast.LoopInExpression, env *object.Environment) obj
 	}
 
 	if f, ok := env.Get("len"); ok {
-		length := applyFunction(*f, []object.Object{loopRange}, env)
+		length := applyFunction(object.UnwrapReferenceValue(*f), []object.Object{loopRange}, env)
 		if isError(length) {
 			return length
 		}
@@ -1281,7 +1281,7 @@ func evalLoopInExpression(le *ast.LoopInExpression, env *object.Environment) obj
 		if f, ok := env.Get("subscript"); ok {
 			for i := int64(0); i < length.(*object.Integer).Value; i++ {
 				newEnv := env.NewEnclosedEnvironment()
-				v := applyFunction(*f, []object.Object{loopRange, &object.Array{Elements: []object.Object{&object.Integer{Value: i}}}}, env)
+				v := applyFunction(object.UnwrapReferenceValue(*f), []object.Object{loopRange, &object.Array{Elements: []object.Object{&object.Integer{Value: i}}}}, env)
 				if isError(v) {
 					return v
 				}

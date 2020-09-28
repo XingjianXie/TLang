@@ -370,6 +370,7 @@ func TestFunctionApplication(t *testing.T) {
 		{"let t = func(x) { x + 1; }; t(t(t(1)));", 4},
 		{"{\"@()\": func() { ret 3; }}();", 3},
 		{"{\"@()\": func(self) { ret self.q + 2; }, \"q\": 4}();", 6},
+		{"len\"Hello World!\";", 12},
 	}
 
 	for _, tt := range tests {

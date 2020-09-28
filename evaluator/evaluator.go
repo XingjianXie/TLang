@@ -275,9 +275,9 @@ func init() {
 			return newError("native function append: arg should be Array")
 		}},
 
-		"type": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		"typeFull": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 1 {
-				return newError("native function type: len(args) should be 1")
+				return newError("native function typeFull: len(args) should be 1")
 			}
 			if refer, ok := args[0].(*object.Reference); ok {
 				isConst := ""
@@ -291,6 +291,13 @@ func init() {
 				return &object.String{Value: []rune(isConst + "Reference (" + rawType + ")")}
 			}
 			return &object.String{Value: []rune(args[0].Type())}
+		}},
+
+		"type": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("native function type: len(args) should be 1")
+			}
+			return &object.String{Value: []rune(object.UnwrapReferenceValue(args[0]).Type())}
 		}},
 
 		"array": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
@@ -762,11 +769,11 @@ func extendFunctionEnv(
 
 	l := len(fn.Parameters)
 	if l != 0 {
-		if fn.Parameters[l - 1].Value == "self" {
+		if fn.Parameters[l - 1].Value == "self" || fn.Parameters[l - 1].Value == "selfChangeable" {
 			for len(args) < len(fn.Parameters) - 1{
 				args = append(args, object.VoidObj)
 			}
-			args = append(args, &object.Reference{Value: &fn.Self, Const: true})
+			args = append(args, &object.Reference{Value: &fn.Self, Const: fn.Parameters[l - 1].Value == "self"})
 		}
 	}
 

@@ -27,13 +27,13 @@ func init() {
 			if len(args) != 2 {
 				return newError("native function super: len(args) should be 2")
 			}
-			return applyIndex(args[0], []object.Object{args[1]}, Super)
+			return applyIndex(args[0], []object.Object{args[1]}, Super, env)
 		}},
 		"current": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 2 {
 				return newError("native function current: len(args) should be 2")
 			}
-			return applyIndex(args[0], []object.Object{args[1]}, Current)
+			return applyIndex(args[0], []object.Object{args[1]}, Current, env)
 		}},
 		"classType": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 1 {
@@ -50,7 +50,7 @@ func init() {
 			}
 			v := object.UnwrapReferenceValue(args[1])
 			if arr, ok := v.(*object.Array); ok {
-				return applyFunction(object.UnwrapReferenceValue(args[0]), arr.Elements, env)
+				return applyCall(args[0], arr.Elements, env)
 			}
 			return newError("native function call: args[1] should be Array")
 		}},
@@ -60,7 +60,7 @@ func init() {
 			}
 			v := object.UnwrapReferenceValue(args[1])
 			if arr, ok := v.(*object.Array); ok {
-				return applyIndex(args[0], arr.Elements, Default)
+				return applyIndex(args[0], arr.Elements, Default, env)
 			}
 			return newError("native function subscript: args[1] should be Array")
 		}},
@@ -68,23 +68,11 @@ func init() {
 			if len(args) != 1 {
 				return newError("native function len: len(args) should be 1")
 			}
-			switch arg := object.UnwrapReferenceValue(args[0]).(type) {
-			case *object.String:
-				return &object.Integer{Value: int64(len(arg.Value))}
-			case *object.Array:
-				return &object.Integer{Value: int64(len(arg.Elements))}
-			default:
-				return newError("native function len: arg should be String or Array")
-			}
+			return getLen(object.UnwrapReferenceValue(args[0]))
 		}},
 		"print": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			for _, arg := range args {
-				if f, ok := env.Get("string"); ok {
-					v := applyFunction(object.UnwrapReferenceValue(*f), []object.Object{arg}, env)
-					fmt.Print(string(object.UnwrapReferenceValue(v).(*object.String).Value))
-				} else {
-					return newError("string lost")
-				}
+				fmt.Print(string(toString(object.UnwrapReferenceValue(arg), env).(*object.String).Value))
 			}
 			return object.VoidObj
 		}},
@@ -103,12 +91,7 @@ func init() {
 				return object.VoidObj
 			}
 			for _, arg := range args {
-				if f, ok := env.Get("string"); ok {
-					v := applyFunction(object.UnwrapReferenceValue(*f), []object.Object{arg}, env)
-					fmt.Println(string(object.UnwrapReferenceValue(v).(*object.String).Value))
-				} else {
-					return newError("string lost")
-				}
+				fmt.Println(string(toString(object.UnwrapReferenceValue(arg), env).(*object.String).Value))
 			}
 			return object.VoidObj
 		}},
@@ -125,13 +108,7 @@ func init() {
 				return newError("native function string: len(args) should be 1")
 			}
 			un := object.UnwrapReferenceValue(args[0])
-			if str, ok := un.(*object.String); ok {
-				return str
-			}
-			if ch, ok := un.(*object.Character); ok {
-				return &object.String{Value: []rune{ch.Value}}
-			}
-			return &object.String{Value: []rune(un.Inspect())}
+			return toString(un, env)
 		}},
 		"exit": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 1 && len(args) != 0 {
@@ -266,11 +243,16 @@ func init() {
 			if len(args) != 1 {
 				return newError("native function first: len(args) should be 1")
 			}
-			if array, ok := object.UnwrapReferenceValue(args[0]).(*object.Array); ok {
+			constObj := true
+			if refer, ok := args[0].(*object.Reference); ok {
+				constObj = refer.Const
+				args[0] = object.UnwrapReferenceValue(args[0])
+			}
+			if array, ok := args[0].(*object.Array); ok {
 				if len(array.Elements) == 0 {
 					return object.VoidObj
 				}
-				return &object.Reference{Value: &array.Elements[0], Const: false}
+				return &object.Reference{Value: &array.Elements[0], Const: constObj}
 			}
 			return newError("native function first: arg should be Array")
 		}},
@@ -279,11 +261,16 @@ func init() {
 			if len(args) != 1 {
 				return newError("native function fetch: len(args) should be 1")
 			}
+			constObj := true
+			if refer, ok := args[0].(*object.Reference); ok {
+				constObj = refer.Const
+				args[0] = object.UnwrapReferenceValue(args[0])
+			}
 			if array, ok := object.UnwrapReferenceValue(args[0]).(*object.Array); ok {
 				if len(array.Elements) == 0 {
 					return object.VoidObj
 				}
-				return &object.Reference{Value: &array.Elements[len(array.Elements)-1], Const: false}
+				return &object.Reference{Value: &array.Elements[len(array.Elements)-1], Const: constObj}
 			}
 			return newError("native function append: arg should be Array")
 		}},
@@ -339,7 +326,7 @@ func init() {
 						var elem []object.Object
 						e := object.UnwrapReferenceValue(args[1])
 						for i := int64(0); i < length.Value; i++ {
-							e = object.UnwrapReferenceValue(applyFunction(function, []object.Object{&object.Integer{Value: i}, e}, env))
+							e = object.UnwrapReferenceValue(applyCall(function, []object.Object{&object.Integer{Value: i}, e}, env))
 							if isError(e) {
 								return e
 							}
@@ -407,7 +394,7 @@ func init() {
 					return result
 				}
 				if export, ok := importEnv.Get("export"); ok {
-					return &object.Reference{Value: export, Const: true}
+					return *export
 				}
 				return object.VoidObj
 				//return newError("native function import: export obj not found")
@@ -458,7 +445,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.FunctionLiteral:
 		params := node.Parameters
 		body := node.Body
-		return &object.Function{Parameters: params, Env: env, Body: body}
+		return &object.Function{Parameters: params, Env: env, Body: body, Self: object.VoidObj}
 	case *ast.UnderLineLiteral:
 		body := node.Body
 		return &object.UnderLine{Env: env, Body: body}
@@ -487,7 +474,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		if isError(right) {
 			return right
 		}
-		return evalInfixExpression(node.Operator, left, right)
+		return evalInfixExpression(node.Operator, left, right, env)
 
 	case *ast.IfExpression:
 		return evalIfExpression(node, env)
@@ -498,7 +485,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.AssignExpression:
 		return evalAssignExpression(node, env)
 	case *ast.CallExpression:
-		function := object.UnwrapReferenceValue(Eval(node.Function, env))
+		function := Eval(node.Function, env)
 		if isError(function) {
 			return function
 		}
@@ -509,7 +496,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			}
 		}
 
-		return applyFunction(function, args, env)
+		return applyCall(function, args, env)
 	case *ast.IndexExpression:
 		ident := Eval(node.Left, env)
 		if isError(ident) {
@@ -519,20 +506,14 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		if len(indexes) == 1 && isError(indexes[0]) {
 			return indexes[0]
 		}
-		if f, ok := env.Get("subscript"); ok {
-			return applyFunction(object.UnwrapReferenceValue(*f), []object.Object{ident, &object.Array{Elements: indexes}}, env)
-		}
-		return newError("subscript lost")
+		return applyIndex(ident, indexes, Default, env)
 	case *ast.DotExpression:
 		left := Eval(node.Left, env)
 		if isError(left) {
 			return left
 		}
 		if str, ok := node.Right.(*ast.Identifier); ok {
-			if f, ok := env.Get("subscript"); ok {
-				return applyFunction(object.UnwrapReferenceValue(*f), []object.Object{left, &object.Array{Elements: []object.Object{&object.String{Value: []rune(str.Value)}}}}, env)
-			}
-			return newError("subscript lost")
+			return applyIndex(left, []object.Object{&object.String{Value: []rune(str.Value)}}, Default, env)
 		}
 		return newError("Not a key: %s", node.Right.String())
 
@@ -589,7 +570,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 					return object.VoidObj
 				}
 			}
-			return newError("left value not Identifier or AllocRequired: %s", node.DelIdent.String())
+			return newError("left value not Identifier or Allocable: %s", node.DelIdent.String())
 		}
 	}
 
@@ -638,14 +619,14 @@ func template(hash *object.Hash) (*object.Hash, bool) {
 	return nil, false
 }
 
-func applyIndex(ident object.Object, indexes []object.Object, flag classFlag) object.Object {
+func applyIndex(obj object.Object, indexes []object.Object, flag classFlag, env *object.Environment) object.Object {
 	constObj := true
-	if refer, ok := ident.(*object.Reference); ok {
+	if refer, ok := obj.(*object.Reference); ok {
 		constObj = refer.Const
-		ident = object.UnwrapReferenceValue(ident)
+		obj = object.UnwrapReferenceValue(obj)
 	}
 
-	if arr, ok := ident.(*object.Array); ok {
+	if arr, ok := obj.(*object.Array); ok {
 		if len(indexes) != 1 {
 			return newError("array: len(indexes) should be 1")
 		}
@@ -663,7 +644,7 @@ func applyIndex(ident object.Object, indexes []object.Object, flag classFlag) ob
 		}
 		return &object.Reference{Value: refObj, Const: constObj}
 	}
-	if str, ok := ident.(*object.String); ok {
+	if str, ok := obj.(*object.String); ok {
 		//runeStr := []rune(str.Value)
 		if len(indexes) != 1 {
 			return newError("string: len(indexes) should be 1")
@@ -679,7 +660,7 @@ func applyIndex(ident object.Object, indexes []object.Object, flag classFlag) ob
 		var c object.Object = &object.Character{Value: str.Value[index]}
 		return &object.Reference{Value: &c, Const: true}
 	}
-	if hash, ok := ident.(*object.Hash); ok {
+	if hash, ok := obj.(*object.Hash); ok {
 		if len(indexes) != 1 {
 			return newError("string: len(indexes) should be 1")
 		}
@@ -718,17 +699,25 @@ func applyIndex(ident object.Object, indexes []object.Object, flag classFlag) ob
 			refObj := pair.Value
 			if refer, ok := (*refObj).(*object.Reference); ok {
 				return &object.Reference{Value: refer.Value, Const: preserveConst || constObj, Origin: hashOld, Index: key}
-				//return refer
 			}
 			return &object.Reference{Value: pair.Value, Const: preserveConst || constObj, Origin: hashOld, Index: key}
 		} else {
+			if key.HashKey().Value != "@[]" {
+				ref := applyIndex(obj, []object.Object{&object.String{Value: []rune("@[]")}}, Default, env).(*object.Reference)
+				if ref.Value != nil {
+					return applyCall(ref, indexes, env)
+				}
+			}
 			return &object.Reference{Value: nil, Const: constObj, Origin: hashOld, Index: key}
 		}
 	}
-	return newError("not Array, String or Hash: %s", ident.Type())
+	return newError("not Array, String or Hash: %s", obj.Type())
 }
 
-func applyFunction(fn object.Object, args []object.Object, env *object.Environment) object.Object {
+func applyCall(fn object.Object, args []object.Object, env *object.Environment) object.Object {
+	if _, ok := fn.(*object.Reference); ok {
+		fn = object.UnwrapReferenceValue(fn)
+	}
 	if function, ok := fn.(*object.Function); ok {
 		extendedEnv := extendFunctionEnv(function, args)
 		evaluated := Eval(function.Body, extendedEnv)
@@ -755,6 +744,13 @@ func applyFunction(fn object.Object, args []object.Object, env *object.Environme
 		return native.Fn(env, args)
 	}
 
+	if hash, ok := fn.(*object.Hash); ok {
+		ref := applyIndex(hash, []object.Object{&object.String{Value: []rune("@()")}}, Default, env).(*object.Reference)
+		if ref.Value != nil {
+			return applyCall(ref, args, env)
+		}
+	}
+
 	return newError("not a function, underline function or a native function: %s", fn.Type())
 }
 
@@ -767,6 +763,9 @@ func extendFunctionEnv(
 	l := len(fn.Parameters)
 	if l != 0 {
 		if fn.Parameters[l - 1].Value == "self" {
+			for len(args) < len(fn.Parameters) - 1{
+				args = append(args, object.VoidObj)
+			}
 			args = append(args, &object.Reference{Value: &fn.Self, Const: true})
 		}
 	}
@@ -933,6 +932,24 @@ func evalAssignExpression(node *ast.AssignExpression, env *object.Environment) o
 		return left
 	}
 	if refer, ok := left.(*object.Reference); ok {
+		var newVal object.Object
+		switch node.Operator {
+		case "+=":
+			newVal = evalInfixExpression("+", *refer.Value, val, env)
+		case "-=":
+			newVal = evalInfixExpression("-", *refer.Value, val, env)
+		case "*=":
+			newVal = evalInfixExpression("*", *refer.Value, val, env)
+		case "/=":
+			newVal = evalInfixExpression("/", *refer.Value, val, env)
+		case "%=":
+			newVal = evalInfixExpression("%", *refer.Value, val, env)
+		case "=":
+			newVal = val.Copy()
+		}
+		if isError(newVal) {
+			return newVal
+		}
 		if refer.Const {
 			return newError("assign to const reference")
 		}
@@ -944,24 +961,6 @@ func evalAssignExpression(node *ast.AssignExpression, env *object.Environment) o
 				return newError("assign to empty reference with alloc function failed")
 			}
 		}
-		var newVal object.Object
-		switch node.Operator {
-		case "+=":
-			newVal = evalInfixExpression("+", *refer.Value, val)
-		case "-=":
-			newVal = evalInfixExpression("-", *refer.Value, val)
-		case "*=":
-			newVal = evalInfixExpression("*", *refer.Value, val)
-		case "/=":
-			newVal = evalInfixExpression("/", *refer.Value, val)
-		case "%=":
-			newVal = evalInfixExpression("%", *refer.Value, val)
-		case "=":
-			newVal = val.Copy()
-		}
-		if isError(newVal) {
-			return newVal
-		}
 		*refer.Value = newVal
 		return newVal
 	}
@@ -971,6 +970,7 @@ func evalAssignExpression(node *ast.AssignExpression, env *object.Environment) o
 func evalInfixExpression(
 	operator string,
 	left, right object.Object,
+	env *object.Environment,
 ) object.Object {
 	switch {
 	case left.Type() == object.INTEGER || left.Type() == object.FLOAT:
@@ -994,10 +994,26 @@ func evalInfixExpression(
 		return newError("type mismatch: %s %s %s",
 			left.Type(), operator, right.Type())
 
+	case left.Type() == object.HASH:
+		return evalHashInfixExpression(operator, left.(*object.Hash), right, env)
+
 	default:
 		return newError("unknown operator: %s %s %s",
 			left.Type(), operator, right.Type())
 	}
+}
+
+func evalHashInfixExpression(
+	operator string,
+	left *object.Hash,
+	right object.Object,
+	env *object.Environment,
+) object.Object {
+	return applyCall(
+		applyIndex(left, []object.Object{&object.String{Value: []rune("@" + operator)}}, Default, env),
+		[]object.Object{right, left},
+		env,
+		)
 }
 
 func evalBooleanInfixExpression(
@@ -1271,37 +1287,33 @@ func evalLoopInExpression(le *ast.LoopInExpression, env *object.Environment) obj
 	if isError(loopRange) {
 		return loopRange
 	}
-
 	if f, ok := env.Get("len"); ok {
-		length := applyFunction(object.UnwrapReferenceValue(*f), []object.Object{loopRange}, env)
+		length := applyCall(*f, []object.Object{loopRange}, env)
 		if isError(length) {
 			return length
 		}
 
-		if f, ok := env.Get("subscript"); ok {
-			for i := int64(0); i < length.(*object.Integer).Value; i++ {
-				newEnv := env.NewEnclosedEnvironment()
-				v := applyFunction(object.UnwrapReferenceValue(*f), []object.Object{loopRange, &object.Array{Elements: []object.Object{&object.Integer{Value: i}}}}, env)
-				if isError(v) {
-					return v
-				}
-				newEnv.SetCurrent(le.Name.Value, v)
-				newResult := Eval(le.Body, newEnv)
-				if isError(newResult) || newResult.Type() == object.RET {
-					return newResult
-				}
-
-				if newResult.Type() == object.OUT {
-					return object.UnwrapOutValue(newResult)
-				}
-
-				if newResult.Type() != object.JUMP {
-					result = newResult
-				}
+		for i := int64(0); i < length.(*object.Integer).Value; i++ {
+			newEnv := env.NewEnclosedEnvironment()
+			v := applyIndex(loopRange, []object.Object{&object.Integer{Value: i}}, Default, env)
+			if isError(v) {
+				return v
 			}
-			return result
+			newEnv.SetCurrent(le.Name.Value, v)
+			newResult := Eval(le.Body, newEnv)
+			if isError(newResult) || newResult.Type() == object.RET {
+				return newResult
+			}
+
+			if newResult.Type() == object.OUT {
+				return object.UnwrapOutValue(newResult)
+			}
+
+			if newResult.Type() != object.JUMP {
+				result = newResult
+			}
 		}
-		return newError("subscript lost")
+		return result
 	}
 	return newError("len")
 }
@@ -1310,22 +1322,49 @@ func isTruthy(obj object.Object) bool {
 	return toBoolean(obj) == object.TrueObj
 }
 
-func toBoolean(number object.Object) object.Object {
-	switch number.Type() {
+func toBoolean(obj object.Object) object.Object {
+	switch obj.Type() {
 	case object.INTEGER:
-		if number.(*object.Integer).Value != 0 {
+		if obj.(*object.Integer).Value != 0 {
 			return object.TrueObj
 		}
 		return object.FalseObj
 	case object.FLOAT:
-		if number.(*object.Float).Value != 0 && !math.IsNaN(number.(*object.Float).Value) {
+		if obj.(*object.Float).Value != 0 && !math.IsNaN(obj.(*object.Float).Value) {
 			return object.TrueObj
 		}
 		return object.FalseObj
 	case object.BOOLEAN:
-		return number
+		return obj
 	case object.VOID:
 		return object.FalseObj
 	}
-	return newError("could not parse %s as boolean", number.Inspect())
+	return newError("could not parse %s as boolean", obj.Inspect())
+}
+
+func toString(obj object.Object, env *object.Environment) object.Object {
+	if str, ok := obj.(*object.String); ok {
+		return str
+	}
+	if ch, ok := obj.(*object.Character); ok {
+		return &object.String{Value: []rune{ch.Value}}
+	}
+	if hash, ok := obj.(*object.Hash); ok {
+		ref := applyIndex(hash, []object.Object{&object.String{Value: []rune("@string")}}, Default, env).(*object.Reference)
+		if ref.Value != nil {
+			return object.UnwrapReferenceValue(applyCall(ref, []object.Object{}, env))
+		}
+	}
+	return &object.String{Value: []rune(obj.Inspect())}
+}
+
+func getLen(obj object.Object) object.Object {
+	switch arg := object.UnwrapReferenceValue(obj).(type) {
+	case *object.String:
+		return &object.Integer{Value: int64(len(arg.Value))}
+	case *object.Array:
+		return &object.Integer{Value: int64(len(arg.Elements))}
+	default:
+		return newError("native function len: arg should be String or Array")
+	}
 }

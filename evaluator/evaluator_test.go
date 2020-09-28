@@ -368,6 +368,8 @@ func TestFunctionApplication(t *testing.T) {
 		{"func(x) { x; }(5);", 5},
 		{"_ { let t = args[0]; t; }(5);", 5},
 		{"let t = func(x) { x + 1; }; t(t(t(1)));", 4},
+		{"{\"@()\": func() { ret 3; }}();", 3},
+		{"{\"@()\": func(self) { ret self.q + 2; }, \"q\": 4}();", 6},
 	}
 
 	for _, tt := range tests {
@@ -506,7 +508,7 @@ func TestArrayIndexExpressions(t *testing.T) {
 		},
 		{
 			"let a = [1, 2]; del a[0];",
-			"left value not Identifier or AllocRequired: (a[0])",
+			"left value not Identifier or Allocable: (a[0])",
 		},
 		{
 			"let a = [1, 2]; a[0] = 2; a[0];",
@@ -583,6 +585,9 @@ func TestReference(t *testing.T) {
 		{"let a = { 1:2, 3:4, 5:6 }; a[1] = 4; a[1];", 4},
 		{"let a = { 1:2, 3:4, 5: 6}; ref b = a[1]; b = 4; a[1];", 4},
 		{"let a = { 1:2, \"1\":3 }; integer(a[1] == 2 and a[string(1)] == 3);", 1},
+		{"let a = { \"f\": func(self){ret self.q;}, \"q\": 2 }; a.f();", 2},
+		{"integer(type(value({func(self){ret self;}())) == \"Void\");", 1},
+		{"let a = {\"b\": 2}; a.a = a; a.a.b;",2},
 	}
 
 	for _, tt := range tests {
@@ -677,39 +682,9 @@ func TestHashIndexExpressions(t *testing.T) {
 		},
 		{
 			`
-let @subscript = subscript;
-subscript = _ {
-    let subscript = @subscript;
-    ret if (type(value(args[0])) == "Func") {
-        call(args[0], args[1]);
-    } else {
-        call(subscript, args);
-    };
-};
-(func(a, b) { ret a + b; })[1, 2];
-`,
-			3,
-		},
-		{
-			`
-let @subscript = subscript;
-subscript = _ {
-    let subscript = @subscript;
-    ret if (type(value(args[0])) == "Integer") {
-        args[0] + args[1][0];
-    } else {
-        call(subscript, args);
-    };
-};
-3[4];
-`,
-			7,
-		},
-		{
-			`
 let Person = {
 	"@class": "Person",
-	"getInfo": func(self) {
+	"@()": func(self) {
 		if (classType(self) != "Instance") {
 			error("Class Type");
 		};
@@ -722,9 +697,9 @@ let Person = {
 let Student = {
 	"@class": "Student",
 	"@template": Person,
-	"getInfo": func(self) {
+	"@()": func(self) {
 		let str = "";
-		str += super(self, "getInfo")();
+		str += super(self, "@()")();
 		str += "School Name: " + self.school + "\n";
 	}
 };
@@ -735,12 +710,13 @@ let c = {
 	"school": "CNU High School",
 };
 
-if (c.getInfo() != "Class Name: Student\nPerson Name: Mark\nSchool Name: CNU High School\n") {
+if (c() != "Class Name: Student\nPerson Name: Mark\nSchool Name: CNU High School\n") {
 	error("");
 };
 `,
 			nil,
 		},
+		{"let a = {\"@[]\": func() { ret 2; }, \"zz\": 3}; a.aa + a.zz;", 5},
 	}
 
 	for _, tt := range tests {

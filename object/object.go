@@ -84,7 +84,7 @@ type Letter interface {
 
 type Functor interface {
 	Object
-	LikeFunctionObj()
+	FunctorObj()
 }
 
 type HashAble interface {
@@ -92,7 +92,7 @@ type HashAble interface {
 	HashKey() HashKey
 }
 
-type AllocRequired interface {
+type Allocable interface {
 	Object
 	DoAlloc(Index Object) (*Object, bool)
 	DeAlloc(Index Object) bool
@@ -210,8 +210,8 @@ func (f *Function) Inspect() string {
 	return out.String()
 }
 func (f *Function) Type() Type       { return FUNC }
-func (f *Function) Copy() Object     { return f }
-func (f *Function) LikeFunctionObj() {}
+func (f *Function) Copy() Object { return f }
+func (f *Function) FunctorObj()  {}
 
 type UnderLine struct {
 	Body *ast.BlockStatement
@@ -227,8 +227,8 @@ func (u *UnderLine) Inspect() string {
 	return out.String()
 }
 func (u *UnderLine) Type() Type       { return UNDERLINE }
-func (u *UnderLine) Copy() Object     { return u }
-func (u *UnderLine) LikeFunctionObj() {}
+func (u *UnderLine) Copy() Object { return u }
+func (u *UnderLine) FunctorObj()  {}
 
 type String struct {
 	Value []rune
@@ -260,8 +260,8 @@ type Native struct {
 
 func (n *Native) Inspect() string  { return "func [Native]" }
 func (n *Native) Type() Type       { return NATIVE }
-func (n *Native) Copy() Object     { return n }
-func (n *Native) LikeFunctionObj() {}
+func (n *Native) Copy() Object { return n }
+func (n *Native) FunctorObj()  {}
 
 type Array struct {
 	Elements []Object
@@ -297,7 +297,7 @@ func (a *Array) Copy() Object {
 
 type Reference struct {
 	Value  *Object
-	Origin AllocRequired
+	Origin Allocable
 	Index  Object
 	Const  bool
 }
@@ -333,6 +333,7 @@ type Hash struct {
 	Copyable bool
 }
 
+func (h *Hash) FunctorObj()  {}
 func (h *Hash) DoAlloc(Index Object) (*Object, bool) {
 	if hashIndex, ok := Index.(HashAble); ok {
 		key := hashIndex.HashKey()

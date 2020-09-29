@@ -31,7 +31,7 @@ func main() {
 
 		evaluated := evaluator.Eval(program, env)
 		if evaluated.Type() == object.ERR {
-			_, _ = io.WriteString(os.Stderr, evaluated.Inspect())
+			_, _ = io.WriteString(os.Stderr, evaluated.Inspect(16))
 			_, _ = io.WriteString(os.Stderr, "\n")
 			os.Exit(1)
 		}

@@ -12,6 +12,7 @@ import (
 	"math"
 	"os"
 	"strconv"
+	"strings"
 )
 
 func PrintParserErrors(out io.Writer, errors []string) {
@@ -34,6 +35,8 @@ func init() {
 				return newError("native function current: len(args) should be 2")
 			}
 			return applyIndex(args[0], []object.Object{args[1]}, Current, env)
+			//TODO: here is a bug on Current
+			//TODO: Maybe Not, because of @class is not defined
 		}},
 		"classType": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 1 {
@@ -68,7 +71,7 @@ func init() {
 			if len(args) != 1 {
 				return newError("native function len: len(args) should be 1")
 			}
-			return getLen(object.UnwrapReferenceValue(args[0]))
+			return getLen(object.UnwrapReferenceValue(args[0]), env)
 		}},
 		"print": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			for _, arg := range args {
@@ -224,7 +227,7 @@ func init() {
 				return newError("native function fetch: len(args) should be 1")
 			}
 			if err, ok := args[0].(*object.Err); ok {
-				return &object.String{Value: []rune(err.Inspect())}
+				return &object.String{Value: []rune(err.Inspect(16))}
 			}
 			return args[0]
 		}},
@@ -375,6 +378,86 @@ func init() {
 			} else {
 				return newError("native function error: arg should be String")
 			}
+		}},
+
+		"std": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			return Eval(parser.New(lexer.New(`
+				{
+					"max": _ {
+						if (len(args) == 0) {
+							ret void;
+						};
+						if (len(args) == 1 and type(args[0]) == "ARRAY") {
+							if (len(args[0]) == 0) {
+								ret void;
+							};
+							let maximum = args[0][0];
+							loop x in args[0] {
+								maximum = if (x > maximum) { x; } else { maximum; };
+							};
+							ret maximum;
+						} else {
+							ret std.max(args);
+						};
+					},
+				
+					"min": _ {
+						if (len(args) == 0) {
+							ret void;
+						};
+						if (len(args) == 1 and type(args[0]) == "ARRAY") {
+							if (len(args[0]) == 0) {
+								ret void;
+							};
+							let minimum = args[0][0];
+							loop x in args[0] {
+								minimum = if (x < minimum) { x; } else { minimum; };
+							};
+							ret minimum;
+						} else {
+							ret std.min(args);
+						};
+					},
+				
+					"abs": _ {
+						if (len(args) != 1) {
+							ret void;
+						};
+						ret if (args[0] < 0) { -args[0]; } else { args[0]; };
+					},
+				
+					"sqrt": _ {
+						if (len(args) != 1) {
+							ret void;
+						};
+						let L = 0;
+						let R = std.max(1, args[0]);
+						ret int((loop (R - L >= 1e-12) {
+							let M = (L + R) / 2;
+							let K = M * M;
+							if (std.abs(K - args[0]) <= 1e-12) {
+								out M;
+							};
+							if (K > args[0]) {
+								R;
+							} else if (K < args[0]) {
+								L;
+							} = M;
+						} * 1e11 + 5) / 10) / 1e10;
+					},
+				
+					"about": _ {
+						printLine();
+						printLine("TLang by mark07x");
+						printLine("T Language v0.1");
+						printLine();
+						printLine("std.tl by mark07x");
+						printLine("TLang Standard Library v1.0");
+						printLine();
+						printLine("Hello World, Mark!");
+						printLine();
+					}
+				};`)).ParseProgram(), env)
 		}},
 
 		"import": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
@@ -568,11 +651,11 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		} else {
 			if refer, ok := Eval(node.DelIdent, env).(*object.Reference); ok {
 				if refer.Const {
-					return newError("delete a constant reference: %s", refer.Inspect())
+					return newError("delete a constant reference: %s", refer.Inspect(16))
 				}
 				if refer.Origin != nil {
 					if !refer.Origin.DeAlloc(refer.Index) {
-						return newError("unable to dealloc: %s", refer.Inspect())
+						return newError("unable to dealloc: %s", refer.Inspect(16))
 					}
 					return object.VoidObj
 				}
@@ -709,7 +792,7 @@ func applyIndex(obj object.Object, indexes []object.Object, flag classFlag, env 
 			}
 			return &object.Reference{Value: pair.Value, Const: preserveConst || constObj, Origin: hashOld, Index: key}
 		} else {
-			if key.HashKey().Value != "@[]" {
+			if s, ok := key.HashKey().Value.(string); !ok || !strings.HasPrefix(s, "@") {
 				ref := applyIndex(obj, []object.Object{&object.String{Value: []rune("@[]")}}, Default, env).(*object.Reference)
 				if ref.Value != nil {
 					return applyCall(ref, indexes, env)
@@ -901,15 +984,15 @@ func evalRefStatement(node *ast.RefStatement, env *object.Environment) object.Ob
 	}
 	if refer, ok := left.(*object.Reference); ok {
 		if refer.Value == nil {
-			return newError("refer to [NOT ALLOC]: %s", left.Inspect())
+			return newError("refer to [NOT ALLOC]: %s", left.Inspect(16))
 		}
 		if _, ok := env.SetCurrent(node.Name.Value, refer); !ok {
-			return newError("identifier %s already set", left.Inspect())
+			return newError("identifier %s already set", left.Inspect(16))
 		}
 		return object.VoidObj
 	} else {
 		if _, ok := env.SetCurrent(node.Name.Value, &object.Reference{Value: &left, Const: true}); !ok {
-			return newError("identifier %s already set", left.Inspect())
+			return newError("identifier %s already set", left.Inspect(16))
 		}
 		return object.VoidObj
 	}
@@ -971,7 +1054,7 @@ func evalAssignExpression(node *ast.AssignExpression, env *object.Environment) o
 		*refer.Value = newVal
 		return newVal
 	}
-	return newError("left value not Reference: %s", left.Inspect())
+	return newError("left value not Reference: %s", left.Inspect(16))
 }
 
 func evalInfixExpression(
@@ -1346,7 +1429,7 @@ func toBoolean(obj object.Object) object.Object {
 	case object.VOID:
 		return object.FalseObj
 	}
-	return newError("could not parse %s as boolean", obj.Inspect())
+	return newError("could not parse %s as boolean", obj.Inspect(16))
 }
 
 func toString(obj object.Object, env *object.Environment) object.Object {
@@ -1362,15 +1445,21 @@ func toString(obj object.Object, env *object.Environment) object.Object {
 			return object.UnwrapReferenceValue(applyCall(ref, []object.Object{}, env))
 		}
 	}
-	return &object.String{Value: []rune(obj.Inspect())}
+	return &object.String{Value: []rune(obj.Inspect(16))}
 }
 
-func getLen(obj object.Object) object.Object {
+func getLen(obj object.Object, env *object.Environment) object.Object {
 	switch arg := object.UnwrapReferenceValue(obj).(type) {
 	case *object.String:
 		return &object.Integer{Value: int64(len(arg.Value))}
 	case *object.Array:
 		return &object.Integer{Value: int64(len(arg.Elements))}
+	case *object.Hash:
+		ref := applyIndex(arg, []object.Object{&object.String{Value: []rune("@len")}}, Default, env).(*object.Reference)
+		if ref.Value != nil {
+			return object.UnwrapReferenceValue(applyCall(ref, []object.Object{}, env))
+		}
+		return newError("native function len: arg should be String or Array")
 	default:
 		return newError("native function len: arg should be String or Array")
 	}

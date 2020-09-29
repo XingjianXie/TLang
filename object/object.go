@@ -68,7 +68,7 @@ func UnwrapReferenceValue(obj Object) Object {
 
 type Object interface {
 	Type() Type
-	Inspect() string
+	Inspect(num int) string
 	Copy() Object
 }
 
@@ -107,7 +107,7 @@ type Integer struct {
 	Value int64
 }
 
-func (i *Integer) Inspect() string { return fmt.Sprintf("%d", i.Value) }
+func (i *Integer) Inspect(num int) string { return fmt.Sprintf("%d", i.Value) }
 func (i *Integer) Type() Type      { return INTEGER }
 func (i *Integer) Copy() Object    { return i }
 func (i *Integer) NumberObj()      {}
@@ -119,7 +119,7 @@ type Float struct {
 	Value float64
 }
 
-func (f *Float) Inspect() string { return fmt.Sprintf("%g", f.Value) }
+func (f *Float) Inspect(num int) string { return fmt.Sprintf("%g", f.Value) }
 func (f *Float) Type() Type      { return FLOAT }
 func (f *Float) Copy() Object    { return f }
 func (f *Float) NumberObj()      {}
@@ -128,7 +128,7 @@ type Boolean struct {
 	Value bool
 }
 
-func (b *Boolean) Inspect() string { return fmt.Sprintf("%t", b.Value) }
+func (b *Boolean) Inspect(num int) string { return fmt.Sprintf("%t", b.Value) }
 func (b *Boolean) Type() Type      { return BOOLEAN }
 func (b *Boolean) Copy() Object    { return b }
 func (b *Boolean) HashKey() HashKey {
@@ -137,7 +137,7 @@ func (b *Boolean) HashKey() HashKey {
 
 type Void struct{}
 
-func (v *Void) Inspect() string { return "void" }
+func (v *Void) Inspect(num int) string { return "void" }
 func (v *Void) Type() Type      { return VOID }
 func (v *Void) Copy() Object    { return v }
 func (v *Void) HashAble() HashKey {
@@ -148,7 +148,7 @@ type RetValue struct {
 	Value Object
 }
 
-func (rv *RetValue) Inspect() string { return rv.Value.Inspect() }
+func (rv *RetValue) Inspect(num int) string { return rv.Value.Inspect(num) }
 func (rv *RetValue) Type() Type      { return RET }
 func (rv *RetValue) Copy() Object {
 	println("WARNING: COPY RET VALUE")
@@ -159,7 +159,7 @@ type OutValue struct {
 	Value Object
 }
 
-func (ov *OutValue) Inspect() string { return ov.Value.Inspect() }
+func (ov *OutValue) Inspect(num int) string { return ov.Value.Inspect(num) }
 func (ov *OutValue) Type() Type      { return OUT }
 func (ov *OutValue) Copy() Object {
 	println("WARNING: COPY OUT VALUE")
@@ -168,7 +168,7 @@ func (ov *OutValue) Copy() Object {
 
 type Jump struct{}
 
-func (j *Jump) Inspect() string { return "jump" }
+func (j *Jump) Inspect(num int) string { return "jump" }
 func (j *Jump) Type() Type      { return JUMP }
 func (j *Jump) Copy() Object {
 	println("WARNING: COPY JUMP")
@@ -179,7 +179,7 @@ type Err struct {
 	Message string
 }
 
-func (err *Err) Inspect() string { return "ERROR: " + err.Message }
+func (err *Err) Inspect(num int) string { return "ERROR: " + err.Message }
 func (err *Err) Type() Type      { return ERR }
 func (err *Err) Copy() Object {
 	println("WARNING: COPY ERR")
@@ -193,7 +193,10 @@ type Function struct {
 	Self       Object
 }
 
-func (f *Function) Inspect() string {
+func (f *Function) Inspect(num int) string {
+	if num <= 1 {
+		return "func(...) {...}"
+	}
 	var out bytes.Buffer
 
 	var params []string
@@ -218,7 +221,10 @@ type UnderLine struct {
 	Env  *Environment
 }
 
-func (u *UnderLine) Inspect() string {
+func (u *UnderLine) Inspect(num int) string {
+	if num <= 1 {
+		return "_ {...}"
+	}
 	var out bytes.Buffer
 
 	out.WriteString("_ ")
@@ -234,7 +240,7 @@ type String struct {
 	Value []rune
 }
 
-func (s *String) Inspect() string   { return strconv.Quote(string(s.Value)) }
+func (s *String) Inspect(num int) string   { return strconv.Quote(string(s.Value)) }
 func (s *String) Type() Type        { return STRING }
 func (s *String) Copy() Object      { return s }
 func (s *String) LetterObj() string { return string(s.Value) }
@@ -246,7 +252,7 @@ type Character struct {
 	Value rune
 }
 
-func (c *Character) Inspect() string   { return "'" + string(c.Value) + "'" }
+func (c *Character) Inspect(num int) string   { return "'" + string(c.Value) + "'" }
 func (c *Character) Type() Type        { return CHARACTER }
 func (c *Character) Copy() Object      { return c }
 func (c *Character) LetterObj() string { return string(c.Value) }
@@ -258,7 +264,7 @@ type Native struct {
 	Fn func(env *Environment, args []Object) Object
 }
 
-func (n *Native) Inspect() string  { return "func [Native]" }
+func (n *Native) Inspect(num int) string  { return "func [Native]" }
 func (n *Native) Type() Type       { return NATIVE }
 func (n *Native) Copy() Object { return n }
 func (n *Native) FunctorObj()  {}
@@ -268,12 +274,15 @@ type Array struct {
 	Copyable bool
 }
 
-func (a *Array) Inspect() string {
+func (a *Array) Inspect(num int) string {
+	if num <= 0 {
+		return "[...]"
+	}
 	var out bytes.Buffer
 
 	var elements []string
 	for _, e := range a.Elements {
-		elements = append(elements, e.Inspect())
+		elements = append(elements, e.Inspect(num - 1))
 	}
 
 	out.WriteString("[")
@@ -302,7 +311,7 @@ type Reference struct {
 	Const  bool
 }
 
-func (r *Reference) Inspect() string {
+func (r *Reference) Inspect(num int) string {
 	var out bytes.Buffer
 
 	if r.Const {
@@ -310,7 +319,7 @@ func (r *Reference) Inspect() string {
 	}
 	out.WriteString("Reference ")
 	if r.Value != nil {
-		out.WriteString("(" + (*r.Value).Inspect() + ")")
+		out.WriteString("(" + (*r.Value).Inspect(num) + ")")
 	} else {
 		out.WriteString("(Not Alloc)")
 	}
@@ -359,13 +368,16 @@ func (h *Hash) DeAlloc(Index Object) bool {
 	return false
 }
 
-func (h *Hash) Inspect() string {
+func (h *Hash) Inspect(num int) string {
+	if num <= 0 {
+		return "{...}"
+	}
 	var out bytes.Buffer
 
 	var pairs []string
 	for _, pair := range h.Pairs {
 		pairs = append(pairs, fmt.Sprintf("%s: %s",
-			pair.Key.Inspect(), (*pair.Value).Inspect()))
+			pair.Key.Inspect(num - 1), (*pair.Value).Inspect(num - 1)))
 	}
 
 	out.WriteString("{ ")

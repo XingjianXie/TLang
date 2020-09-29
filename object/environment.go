@@ -26,7 +26,7 @@ type Environment struct {
 	outer *Environment
 }
 
-func (e *Environment) Inspect() string { return "[ENV]" }
+func (e *Environment) Inspect(num int) string { return "[ENV]" }
 func (e *Environment) Type() Type      { return ENVIRONMENT }
 func (e *Environment) Copy() Object    { return e }
 

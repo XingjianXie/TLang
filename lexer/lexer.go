@@ -203,7 +203,8 @@ func (l *Lexer) readString() string {
 		l.readChar()
 		if l.ch == '\\' {
 			l.readChar()
-			l.readChar()
+			continue
+			//l.readChar()
 		}
 		if l.ch == '"' || l.ch == 0 {
 			break

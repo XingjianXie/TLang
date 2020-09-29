@@ -20,6 +20,8 @@ func TestNextToken(t *testing.T) {
 10*=10
 "Hello World"
 "123"
+"\n"
+"\""
 ""
 'x'
 void
@@ -78,6 +80,8 @@ _
 
 		{token.String, "Hello World"},
 		{token.String, "123"},
+		{token.String, "\\n"},
+		{token.String, "\\\""},
 		{token.String, ""},
 
 		{token.Character, "x"},

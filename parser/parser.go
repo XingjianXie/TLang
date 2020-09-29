@@ -35,7 +35,10 @@ var precedences = map[token.Type]int{
 	token.Asterisk:     Product,
 	token.Slash:        Product,
 	token.Percentage:   Product,
+	token.Ident:        Call,
+	token.Number:       Call,
 	token.String:       Call,
+	token.Character:    Call,
 	token.Lparen:       Call,
 	token.Lbracket:     Index,
 	token.Dot:          Index,
@@ -176,7 +179,11 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(token.Assign, p.parseInfixExpression)
 
 	p.registerInfix(token.Lparen, p.parseCallExpression)
-	p.registerInfix(token.String, p.parseCallQuoteExpression)
+	p.registerInfix(token.Ident, p.parseCallSpecialExpression)
+	p.registerInfix(token.Number, p.parseCallSpecialExpression)
+	p.registerInfix(token.String, p.parseCallSpecialExpression)
+	p.registerInfix(token.Character, p.parseCallSpecialExpression)
+
 	p.registerInfix(token.Dot, p.parseDotExpression)
 	p.registerInfix(token.Lbracket, p.parseIndexExpression)
 	p.registerInfix(token.Assign, p.parseAssignExpression)
@@ -687,12 +694,20 @@ func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
 	return exp
 }
 
-func (p *Parser) parseCallQuoteExpression(function ast.Expression) ast.Expression {
+func (p *Parser) parseCallSpecialExpression(function ast.Expression) ast.Expression {
 	exp := &ast.CallExpression{Token: p.curToken, Function: function}
-	exp.Arguments = []ast.Expression{&ast.StringLiteral{Token: p.curToken, Value: p.curToken.Literal}}
+	switch p.curToken.Type {
+	case token.Ident:
+		exp.Arguments = []ast.Expression{p.parseIdentifier()}
+	case token.Number:
+		exp.Arguments = []ast.Expression{p.parseNumberLiteral()}
+	case token.String:
+		exp.Arguments = []ast.Expression{p.parseStringLiteral()}
+	case token.Character:
+		exp.Arguments = []ast.Expression{p.parseCharacterLiteral()}
+	}
 	return exp
 }
-
 
 func (p *Parser) parseDotExpression(left ast.Expression) ast.Expression {
 	exp := &ast.DotExpression{Token: p.curToken, Left: left}

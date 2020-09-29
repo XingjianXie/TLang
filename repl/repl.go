@@ -21,6 +21,7 @@ func Start(in io.Reader, out io.Writer) {
 		scanned := scanner.Scan()
 		if !scanned {
 			fmt.Printf("\n")
+			scanner = bufio.NewScanner(in)
 			continue
 		}
 
@@ -31,6 +32,7 @@ func Start(in io.Reader, out io.Writer) {
 			scanned := scanner.Scan()
 			if !scanned {
 				fmt.Printf("\n")
+				scanner = bufio.NewScanner(in)
 				continue
 			}
 			line = line + scanner.Text()

@@ -2,6 +2,7 @@ package lexer
 
 import (
 	"github.com/mark07x/TLang/token"
+	"strings"
 )
 
 type Lexer struct {
@@ -234,7 +235,7 @@ func (l *Lexer) readNumber() string {
 }
 
 func isLetter(ch byte) bool {
-	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_' || ch == '$' || ch == '@'
+	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || strings.Index("~`@#$^&|?_", string(ch)) != -1
 }
 
 func isDigit(ch byte) bool {

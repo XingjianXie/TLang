@@ -70,7 +70,7 @@ func init() {
 				if arrType, ok := object.UnwrapReferenceValue(args[1]).(*object.Array); ok {
 					if arrValue, ok := object.UnwrapReferenceValue(args[2]).(*object.Array); ok {
 						if retType, ok := object.UnwrapReferenceValue(args[3]).(*object.String); ok {
-							return applyCdlCall(i.Value, arrType.Elements, arrValue.Elements, object.TypeC(retType.Value))
+							return applyCdlCall(i.Value, arrType.Elements, arrValue.Elements, object.TypeC(retType.Value), env)
 						}
 						return newError("native function cdlCall: args[3] should be String")
 					}
@@ -920,7 +920,7 @@ func applyIndex(obj object.Object, indexes []object.Object, flag classFlag, env 
 	return newError("not Array, String or Hash: %s", obj.Type())
 }
 
-func applyCdlCall(id int64, argsType []object.Object, argsValue []object.Object, retType object.TypeC) object.Object {
+func applyCdlCall(id int64, argsType []object.Object, argsValue []object.Object, retType object.TypeC, env *object.Environment) object.Object {
 	if len(argsType) != len(argsValue) {
 		return newError("len(argsType) != len(argsValue)")
 	}
@@ -963,7 +963,7 @@ func applyCdlCall(id int64, argsType []object.Object, argsValue []object.Object,
 			case "pointer":
 				argsTypeFFI[i] = &C.ffi_type_pointer
 				cMem := C.malloc(C.sizeof_size_t)
-				switch v := argsValue[i].(type) {
+				switch v := object.UnwrapReferenceValue(argsValue[i]).(type) {
 				case *object.Integer:
 					*(*unsafe.Pointer)(unsafe.Pointer(cMem)) = unsafe.Pointer(uintptr(v.Value))
 				case *object.String:
@@ -1010,11 +1010,11 @@ func applyCdlCall(id int64, argsType []object.Object, argsValue []object.Object,
 		case "long long":
 			return &object.Integer{Value: *(*int64)(rc)}
 		case "int":
-			return &object.Integer{Value: int64(*(*int)(rc))}
+			return code("std().CType(" + strconv.Itoa(*(*int)(rc)) + ", \"int\");", env)
 		case "double":
 			return &object.Float{Value: *(*float64)(rc)}
 		case "pointer":
-			return &object.Integer{Value: int64(uintptr(*(*unsafe.Pointer)(rc)))}
+			return code("std().CType(" + strconv.FormatInt(int64(uintptr(*(*unsafe.Pointer)(rc))), 10) + ", \"pointer\");", env)
 		default:
 			return object.VoidObj
 		}

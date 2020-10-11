@@ -11,16 +11,17 @@ import (
 	"io/ioutil"
 	"math"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"unsafe"
 )
 
 /*
+#cgo LDFLAGS: -lffi
 #include <dlfcn.h>
-void* rawCall(long long func, void* arg) {
-    return (((void* (*)(void*,...))func))(arg);
-}
+#include <ffi.h>
+#include <string.h>
  */
 import "C"
 
@@ -52,7 +53,7 @@ func init() {
 						C.dlsym(unsafe.Pointer(uintptr(i.Value)), C.CString(string(str.Value))),
 					)), 10)
 					c := code(`
-						std().CFunction(` + s + `);
+						std().CFunctionP(` + s + `);
 					`, env)
 					return c
 				}
@@ -61,14 +62,17 @@ func init() {
 			return newError("native function cdlSym: args[0] should be Int")
 		}},
 		"cdlCall": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
-			if len(args) != 3 {
+			if len(args) != 4 {
 				return newError("native function cdlCall: len(args) should be 3")
 			}
 
 			if i, ok := object.UnwrapReferenceValue(args[0]).(*object.Integer); ok {
 				if arrType, ok := object.UnwrapReferenceValue(args[1]).(*object.Array); ok {
 					if arrValue, ok := object.UnwrapReferenceValue(args[2]).(*object.Array); ok {
-						return applyCdlCall(i.Value, arrType.Elements, arrValue.Elements)
+						if retType, ok := object.UnwrapReferenceValue(args[3]).(*object.String); ok {
+							return applyCdlCall(i.Value, arrType.Elements, arrValue.Elements, object.TypeC(retType.Value))
+						}
+						return newError("native function cdlCall: args[3] should be String")
 					}
 					return newError("native function cdlCall: args[2] should be Array")
 				}
@@ -355,6 +359,13 @@ func init() {
 			return &object.String{Value: []rune(object.UnwrapReferenceValue(args[0]).Type())}
 		}},
 
+		"typeC": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("native function type: len(args) should be 1")
+			}
+			return &object.String{Value: []rune(object.UnwrapReferenceValue(args[0]).TypeC())}
+		}},
+
 		"array": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) == 1 {
 				if length, ok := object.UnwrapReferenceValue(args[0]).(*object.Integer); ok {
@@ -444,15 +455,32 @@ func init() {
 						"@class": "CType",
 						"@()": func(args, self) {
 							if (classType self == "Proto") {
-								ret { "@template": self, "cType": value(args[0]), "raw": args[1] };
+								if (len args == 1) {
+									ret { "@template": self, "cType": typeC(args[0]), "raw": args[0] };
+								} else if (len args == 2) {
+									ret { "@template": self, "cType": value(args[1]), "raw": args[0] };
+								};
 							};
+						}
+					},
+					"CFunctionP": {
+						"@class": "CFunctionP",
+						"@()": func(args, self) {
+							if (classType self == "Proto") {
+								ret { "@template": value(self), "id": value(args[0]) };
+							} else if (classType self == "Instance") {
+								ret call(std().CFunction(self.id, "void"), args);
+							};
+						},
+						"@[]": func(args, self) {
+							ret std().CFunction(self.id, args[0]);
 						}
 					},
 					"CFunction": {
 						"@class": "CFunction",
 						"@()": func(args, self) {
 							if (classType self == "Proto") {
-								ret { "@template": value(self), "id": value(args[0]) };
+								ret { "@template": value(self), "id": value(args[0]), "retType": value(args[1]) };
 							} else if (classType self == "Instance") {
 								let tps = [];
 								let ags = args;
@@ -463,11 +491,11 @@ func init() {
 											v = v.raw;
 											r;
 										} else {
-											type v;
+											typeC v;
 										}
 									);
 								};
-								ret cdlCall(self.id, tps, ags);
+								ret cdlCall(self.id, tps, ags, self.retType);
 							};
 						}
 					},
@@ -892,18 +920,106 @@ func applyIndex(obj object.Object, indexes []object.Object, flag classFlag, env 
 	return newError("not Array, String or Hash: %s", obj.Type())
 }
 
-func applyCdlCall(id int64, argType []object.Object, argsValue []object.Object) object.Object {
-	if len(argType) == 1 {
-		switch t := argsValue[0].(type) {
-		case *object.Integer:
-			return &object.Integer{Value: int64(uintptr(C.rawCall(C.longlong(id), unsafe.Pointer(uintptr(t.Value)))))}
-		case *object.String:
-			return &object.Integer{Value: int64(uintptr(C.rawCall(C.longlong(id), unsafe.Pointer(C.CString(string(t.Value))))))}
+func applyCdlCall(id int64, argsType []object.Object, argsValue []object.Object, retType object.TypeC) object.Object {
+	if len(argsType) != len(argsValue) {
+		return newError("len(argsType) != len(argsValue)")
+	}
+	l := len(argsType)
+
+	var cif = (*C.ffi_cif)(C.malloc(C.sizeof_ffi_cif))
+	var argsTypeFFIRaw = C.malloc(C.ulong(C.sizeof_size_t * l))
+	var argsValueFFIRaw = C.malloc(C.ulong(C.sizeof_size_t * l))
+
+	var argsTypeFFI = *(*[]*C.ffi_type)(unsafe.Pointer(&reflect.SliceHeader{
+		Data: uintptr(argsTypeFFIRaw),
+		Len:  l,
+		Cap:  l,
+	}))
+	var argsValueFFI = *(*[]unsafe.Pointer)(unsafe.Pointer(&reflect.SliceHeader{
+		Data: uintptr(argsValueFFIRaw),
+		Len:  l,
+		Cap:  l,
+	}))
+	for i := 0; i < l; i++ {
+		if str, ok := argsType[i].(*object.String); ok {
+			typeName := object.TypeC(str.Value)
+			switch typeName {
+			case "long long":
+				argsTypeFFI[i] = &C.ffi_type_sint64
+				cMem := C.malloc(C.sizeof_longlong)
+				*(*int64)(unsafe.Pointer(cMem)) = object.UnwrapReferenceValue(argsValue[i]).(*object.Integer).Value
+				argsValueFFI[i] = cMem
+			case "int":
+				sint := C.ffi_type_sint
+				argsTypeFFI[i] = &sint
+				cMem := C.malloc(C.sizeof_int)
+				*(*int)(unsafe.Pointer(cMem)) = int(object.UnwrapReferenceValue(argsValue[i]).(*object.Integer).Value)
+				argsValueFFI[i] = cMem
+			case "double":
+				argsTypeFFI[i] = &C.ffi_type_double
+				cMem := C.malloc(C.sizeof_double)
+				*(*float64)(unsafe.Pointer(cMem)) = object.UnwrapReferenceValue(argsValue[i]).(*object.Float).Value
+				argsValueFFI[i] = cMem
+			case "pointer":
+				argsTypeFFI[i] = &C.ffi_type_pointer
+				cMem := C.malloc(C.sizeof_size_t)
+				switch v := argsValue[i].(type) {
+				case *object.Integer:
+					*(*unsafe.Pointer)(unsafe.Pointer(cMem)) = unsafe.Pointer(uintptr(v.Value))
+				case *object.String:
+					*(*unsafe.Pointer)(unsafe.Pointer(cMem)) = unsafe.Pointer(C.CString(string(v.Value)))
+				default:
+					*(*unsafe.Pointer)(unsafe.Pointer(cMem)) = unsafe.Pointer(uintptr(0))
+				}
+				argsValueFFI[i] = cMem
+			default:
+				sint := C.ffi_type_sint
+				argsTypeFFI[i] = &sint
+				cMem := C.malloc(C.sizeof_int)
+				*(*int)(unsafe.Pointer(cMem)) = 0
+				argsValueFFI[i] = cMem
+			}
+		} else {
+			return newError("Function args type not string")
+		}
+	}
+	var rc unsafe.Pointer
+	var rt *C.ffi_type
+	switch retType {
+	case "long long":
+		rc = C.malloc(C.sizeof_longlong)
+		rt = &C.ffi_type_sint64
+	case "int":
+		rc = C.malloc(C.sizeof_int)
+		sint := C.ffi_type_sint
+		rt = &sint
+	case "double":
+		rc = C.malloc(C.sizeof_double)
+		rt = &C.ffi_type_double
+	case "pointer":
+		rc = C.malloc(C.sizeof_size_t)
+		rt = &C.ffi_type_pointer
+	default:
+		rc = C.malloc(C.sizeof_void)
+		rt = &C.ffi_type_void
+	}
+	if C.ffi_prep_cif(cif, C.FFI_DEFAULT_ABI, C.uint(l),
+			rt, (**C.ffi_type)(argsTypeFFIRaw)) == C.FFI_OK {
+		C.ffi_call(cif, (*[0]byte)(unsafe.Pointer(uintptr(id))), rc, (*unsafe.Pointer)(argsValueFFIRaw))
+		switch retType {
+		case "long long":
+			return &object.Integer{Value: *(*int64)(rc)}
+		case "int":
+			return &object.Integer{Value: int64(*(*int)(rc))}
+		case "double":
+			return &object.Float{Value: *(*float64)(rc)}
+		case "pointer":
+			return &object.Integer{Value: int64(uintptr(*(*unsafe.Pointer)(rc)))}
 		default:
 			return object.VoidObj
 		}
 	}
-	return newError("len != 1") // TODO
+	return newError("C Function Produce Failed")
 }
 
 func applyCall(fn object.Object, args []object.Object, env *object.Environment) object.Object {

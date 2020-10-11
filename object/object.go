@@ -9,6 +9,7 @@ import (
 )
 
 type Type string
+type TypeC string
 
 var (
 	TrueObj  Object = &Boolean{Value: true}
@@ -18,23 +19,31 @@ var (
 )
 
 const (
-	INTEGER     = "Integer"
-	FLOAT       = "Float"
-	BOOLEAN     = "Boolean"
-	STRING      = "String"
-	CHARACTER   = "Character"
-	VOID        = "Void"
-	RET         = "Ret"
-	OUT         = "Out"
-	JUMP        = "Jump"
-	ERR         = "Err"
-	FUNC        = "Func"
-	UNDERLINE   = "Underline"
-	NATIVE      = "Native"
-	ARRAY       = "Array"
-	REFERENCE   = "Reference"
-	HASH        = "Hash"
-	ENVIRONMENT = "Environment"
+	INT64 TypeC = "long long"
+	INT TypeC = "int"
+	FLOAT64 TypeC = "double"
+	POINTER TypeC = "pointer"
+	INVALID TypeC = "invalid"
+)
+
+const (
+	INTEGER Type     = "Integer"
+	FLOAT   Type    = "Float"
+	BOOLEAN  Type   = "Boolean"
+	STRING    Type  = "String"
+	CHARACTER Type  = "Character"
+	VOID      Type  = "Void"
+	RET      Type   = "Ret"
+	OUT      Type   = "Out"
+	JUMP     Type   = "Jump"
+	ERR      Type   = "Err"
+	FUNC      Type  = "Func"
+	UNDERLINE  Type = "Underline"
+	NATIVE    Type  = "Native"
+	ARRAY     Type  = "Array"
+	REFERENCE Type  = "Reference"
+	HASH     Type   = "Hash"
+	ENVIRONMENT Type = "Environment"
 )
 
 func UnwrapRetValue(obj Object) Object {
@@ -68,6 +77,7 @@ func UnwrapReferenceValue(obj Object) Object {
 
 type Object interface {
 	Type() Type
+	TypeC() TypeC
 	Inspect(num int) string
 	Copy() Object
 }
@@ -109,6 +119,7 @@ type Integer struct {
 
 func (i *Integer) Inspect(num int) string { return fmt.Sprintf("%d", i.Value) }
 func (i *Integer) Type() Type      { return INTEGER }
+func (i *Integer) TypeC() TypeC      { return INT64 }
 func (i *Integer) Copy() Object    { return i }
 func (i *Integer) NumberObj()      {}
 func (i *Integer) HashKey() HashKey {
@@ -121,6 +132,7 @@ type Float struct {
 
 func (f *Float) Inspect(num int) string { return fmt.Sprintf("%g", f.Value) }
 func (f *Float) Type() Type      { return FLOAT }
+func (f *Float) TypeC() TypeC      { return FLOAT64 }
 func (f *Float) Copy() Object    { return f }
 func (f *Float) NumberObj()      {}
 
@@ -130,6 +142,7 @@ type Boolean struct {
 
 func (b *Boolean) Inspect(num int) string { return fmt.Sprintf("%t", b.Value) }
 func (b *Boolean) Type() Type      { return BOOLEAN }
+func (b *Boolean) TypeC() TypeC      { return INVALID }
 func (b *Boolean) Copy() Object    { return b }
 func (b *Boolean) HashKey() HashKey {
 	return HashKey{Type: b.Type(), Value: b.Value}
@@ -139,6 +152,7 @@ type Void struct{}
 
 func (v *Void) Inspect(num int) string { return "void" }
 func (v *Void) Type() Type      { return VOID }
+func (v *Void) TypeC() TypeC      { return INT }
 func (v *Void) Copy() Object    { return v }
 func (v *Void) HashAble() HashKey {
 	return HashKey{Type: v.Type(), Value: 0}
@@ -150,6 +164,7 @@ type RetValue struct {
 
 func (rv *RetValue) Inspect(num int) string { return rv.Value.Inspect(num) }
 func (rv *RetValue) Type() Type      { return RET }
+func (rv *RetValue) TypeC() TypeC      { return INVALID }
 func (rv *RetValue) Copy() Object {
 	println("WARNING: COPY RET VALUE")
 	return &RetValue{Value: rv.Copy()}
@@ -161,6 +176,7 @@ type OutValue struct {
 
 func (ov *OutValue) Inspect(num int) string { return ov.Value.Inspect(num) }
 func (ov *OutValue) Type() Type      { return OUT }
+func (ov *OutValue) TypeC() TypeC      { return INVALID }
 func (ov *OutValue) Copy() Object {
 	println("WARNING: COPY OUT VALUE")
 	return &OutValue{Value: ov.Copy()}
@@ -170,6 +186,7 @@ type Jump struct{}
 
 func (j *Jump) Inspect(num int) string { return "jump" }
 func (j *Jump) Type() Type      { return JUMP }
+func (j *Jump) TypeC() TypeC      { return INVALID }
 func (j *Jump) Copy() Object {
 	println("WARNING: COPY JUMP")
 	return j
@@ -181,6 +198,7 @@ type Err struct {
 
 func (err *Err) Inspect(num int) string { return "ERROR: " + err.Message }
 func (err *Err) Type() Type      { return ERR }
+func (err *Err) TypeC() TypeC     { return INVALID }
 func (err *Err) Copy() Object {
 	println("WARNING: COPY ERR")
 	return err
@@ -213,6 +231,7 @@ func (f *Function) Inspect(num int) string {
 	return out.String()
 }
 func (f *Function) Type() Type       { return FUNC }
+func (f *Function) TypeC() TypeC       { return INVALID }
 func (f *Function) Copy() Object { return f }
 func (f *Function) FunctorObj()  {}
 
@@ -233,6 +252,7 @@ func (u *UnderLine) Inspect(num int) string {
 	return out.String()
 }
 func (u *UnderLine) Type() Type       { return UNDERLINE }
+func (u *UnderLine) TypeC() TypeC       { return INVALID }
 func (u *UnderLine) Copy() Object { return u }
 func (u *UnderLine) FunctorObj()  {}
 
@@ -242,6 +262,7 @@ type String struct {
 
 func (s *String) Inspect(num int) string   { return strconv.Quote(string(s.Value)) }
 func (s *String) Type() Type        { return STRING }
+func (s *String) TypeC() TypeC        { return POINTER }
 func (s *String) Copy() Object      { return s }
 func (s *String) LetterObj() string { return string(s.Value) }
 func (s *String) HashKey() HashKey {
@@ -254,6 +275,7 @@ type Character struct {
 
 func (c *Character) Inspect(num int) string   { return "'" + string(c.Value) + "'" }
 func (c *Character) Type() Type        { return CHARACTER }
+func (c *Character) TypeC() TypeC        { return INVALID }
 func (c *Character) Copy() Object      { return c }
 func (c *Character) LetterObj() string { return string(c.Value) }
 func (c *Character) HashKey() HashKey {
@@ -266,6 +288,7 @@ type Native struct {
 
 func (n *Native) Inspect(num int) string  { return "func [Native]" }
 func (n *Native) Type() Type       { return NATIVE }
+func (n *Native) TypeC() TypeC       { return INVALID }
 func (n *Native) Copy() Object { return n }
 func (n *Native) FunctorObj()  {}
 
@@ -292,6 +315,7 @@ func (a *Array) Inspect(num int) string {
 	return out.String()
 }
 func (a *Array) Type() Type { return ARRAY }
+func (a *Array) TypeC() TypeC { return POINTER }
 func (a *Array) Copy() Object {
 	if a.Copyable {
 		a.Copyable = false
@@ -328,6 +352,7 @@ func (r *Reference) Inspect(num int) string {
 	return out.String()
 }
 func (r *Reference) Type() Type { return REFERENCE }
+func (r *Reference) TypeC() TypeC { return INVALID }
 func (r *Reference) Copy() Object {
 	return r
 }
@@ -387,6 +412,7 @@ func (h *Hash) Inspect(num int) string {
 	return out.String()
 }
 func (h *Hash) Type() Type { return HASH }
+func (h *Hash) TypeC() TypeC { return INVALID }
 func (h *Hash) Copy() Object {
 	if h.Copyable {
 		h.Copyable = false

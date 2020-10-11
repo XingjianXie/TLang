@@ -368,8 +368,8 @@ func TestFunctionApplication(t *testing.T) {
 		{"func(x) { x; }(5);", 5},
 		{"_ { let t = args[0]; t; }(5);", 5},
 		{"let t = func(x) { x + 1; }; t(t(t(1)));", 4},
-		{"{\"@()\": func() { ret 3; }}();", 3},
-		{"{\"@()\": func(self) { ret self.q + 2; }, \"q\": 4}();", 6},
+		{"{\"@()\": func(args) { ret 3; }}();", 3},
+		{"{\"@()\": func(args, self) { ret self.q + 2; }, \"q\": 4}();", 6},
 		{"len\"Hello World!\";", 12},
 	}
 
@@ -685,7 +685,7 @@ func TestHashIndexExpressions(t *testing.T) {
 			`
 let Person = {
 	"@class": "Person",
-	"@()": func(self) {
+	"@()": func(args, self) {
 		if (classType(self) != "Instance") {
 			error("Class Type");
 		};
@@ -698,7 +698,7 @@ let Person = {
 let Student = {
 	"@class": "Student",
 	"@template": Person,
-	"@()": func(self) {
+	"@()": func(args, self) {
 		let str = "";
 		str += super(self, "@()")();
 		str += "School Name: " + self.school + "\n";

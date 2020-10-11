@@ -13,7 +13,16 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"unsafe"
 )
+
+/*
+#include <dlfcn.h>
+void* rawCall(long long func, void* arg) {
+    return (((void* (*)(void*,...))func))(arg);
+}
+ */
+import "C"
 
 func PrintParserErrors(out io.Writer, errors []string) {
 	_, _ = io.WriteString(out, "PARSER ERRORS:\n")
@@ -24,6 +33,49 @@ func PrintParserErrors(out io.Writer, errors []string) {
 
 func init() {
 	Bases = map[string]object.Object{
+		"cdlOpen": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("native function cdlOpen: len(args) should be 1")
+			}
+			if str, ok := object.UnwrapReferenceValue(args[0]).(*object.String); ok {
+				return &object.Integer{Value: int64(uintptr(C.dlopen(C.CString(string(str.Value)), 1)))}
+			}
+			return newError("native function cdlOpen: arg should be String")
+		}},
+		"cdlSym": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 2 {
+				return newError("native function cdlSym: len(args) should be 2")
+			}
+			if i, ok := object.UnwrapReferenceValue(args[0]).(*object.Integer); ok {
+				if str, ok := object.UnwrapReferenceValue(args[1]).(*object.String); ok {
+					s := strconv.FormatInt(int64(uintptr(
+						C.dlsym(unsafe.Pointer(uintptr(i.Value)), C.CString(string(str.Value))),
+					)), 10)
+					c := code(`
+						std().CFunction(` + s + `);
+					`, env)
+					return c
+				}
+				return newError("native function cdlSym: args[1] should be String")
+			}
+			return newError("native function cdlSym: args[0] should be Int")
+		}},
+		"cdlCall": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 3 {
+				return newError("native function cdlCall: len(args) should be 3")
+			}
+
+			if i, ok := object.UnwrapReferenceValue(args[0]).(*object.Integer); ok {
+				if arrType, ok := object.UnwrapReferenceValue(args[1]).(*object.Array); ok {
+					if arrValue, ok := object.UnwrapReferenceValue(args[2]).(*object.Array); ok {
+						return applyCdlCall(i.Value, arrType.Elements, arrValue.Elements)
+					}
+					return newError("native function cdlCall: args[2] should be Array")
+				}
+				return newError("native function cdlCall: args[1] should be Array")
+			}
+			return newError("native function cdlSym: args[0] should be Int")
+		}},
 		"super": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 2 {
 				return newError("native function super: len(args) should be 2")
@@ -381,8 +433,44 @@ func init() {
 		}},
 
 		"std": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
-			return Eval(parser.New(lexer.New(`
+			return code(`
 				{
+					"C": {
+						"@[]": func(args) {
+							ret cdlSym(-2, args[0]);
+						}
+					},
+					"CType": {
+						"@class": "CType",
+						"@()": func(args, self) {
+							if (classType self == "Proto") {
+								ret { "@template": self, "cType": value(args[0]), "raw": args[1] };
+							};
+						}
+					},
+					"CFunction": {
+						"@class": "CFunction",
+						"@()": func(args, self) {
+							if (classType self == "Proto") {
+								ret { "@template": value(self), "id": value(args[0]) };
+							} else if (classType self == "Instance") {
+								let tps = [];
+								let ags = args;
+								loop v in ags {
+									tps = append(tps, 
+										if (type v == "Hash") {
+											let r = v.cType;
+											v = v.raw;
+											r;
+										} else {
+											type v;
+										}
+									);
+								};
+								ret cdlCall(self.id, tps, ags);
+							};
+						}
+					},
 					"max": _ {
 						if (len(args) == 0) {
 							ret void;
@@ -457,7 +545,7 @@ func init() {
 						printLine("Hello World, Mark!");
 						printLine();
 					}
-				};`)).ParseProgram(), env)
+				};`, env)
 		}},
 
 		"import": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
@@ -795,13 +883,27 @@ func applyIndex(obj object.Object, indexes []object.Object, flag classFlag, env 
 			if s, ok := key.HashKey().Value.(string); !ok || !strings.HasPrefix(s, "@") {
 				ref := applyIndex(obj, []object.Object{&object.String{Value: []rune("@[]")}}, Default, env).(*object.Reference)
 				if ref.Value != nil {
-					return applyCall(ref, indexes, env)
+					return applyCall(ref, []object.Object{&object.Array{Elements: indexes}}, env)
 				}
 			}
 			return &object.Reference{Value: nil, Const: constObj, Origin: hashOld, Index: key}
 		}
 	}
 	return newError("not Array, String or Hash: %s", obj.Type())
+}
+
+func applyCdlCall(id int64, argType []object.Object, argsValue []object.Object) object.Object {
+	if len(argType) == 1 {
+		switch t := argsValue[0].(type) {
+		case *object.Integer:
+			return &object.Integer{Value: int64(uintptr(C.rawCall(C.longlong(id), unsafe.Pointer(uintptr(t.Value)))))}
+		case *object.String:
+			return &object.Integer{Value: int64(uintptr(C.rawCall(C.longlong(id), unsafe.Pointer(C.CString(string(t.Value))))))}
+		default:
+			return object.VoidObj
+		}
+	}
+	return newError("len != 1") // TODO
 }
 
 func applyCall(fn object.Object, args []object.Object, env *object.Environment) object.Object {
@@ -837,7 +939,7 @@ func applyCall(fn object.Object, args []object.Object, env *object.Environment) 
 	if hash, ok := fn.(*object.Hash); ok {
 		ref := applyIndex(hash, []object.Object{&object.String{Value: []rune("@()")}}, Default, env).(*object.Reference)
 		if ref.Value != nil {
-			return applyCall(ref, args, env)
+			return applyCall(ref, []object.Object{&object.Array{Elements: args}}, env)
 		}
 	}
 
@@ -1463,4 +1565,8 @@ func getLen(obj object.Object, env *object.Environment) object.Object {
 	default:
 		return newError("native function len: arg should be String or Array")
 	}
+}
+
+func code(str string, env *object.Environment) object.Object {
+	return Eval(parser.New(lexer.New(str)).ParseProgram(), env)
 }

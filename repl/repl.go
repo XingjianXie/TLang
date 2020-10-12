@@ -14,7 +14,7 @@ const PROMPT = "T> "
 
 func Start(in io.Reader, out io.Writer) {
 	scanner := bufio.NewScanner(in)
-	env := object.NewEnvironment(evaluator.Bases)
+	env := evaluator.SharedEnv.NewEnclosedEnvironment()
 
 	for {
 		fmt.Printf(PROMPT)

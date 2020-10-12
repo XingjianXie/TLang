@@ -167,15 +167,16 @@ func (l *Lexer) NextToken() token.Token {
 		tok.Literal = ""
 		tok.Type = token.Eof
 	default:
-		if isLetter(l.ch) {
+		switch {
+		case isLetter(l.ch):
 			tok.Literal = l.readIdentifier()
 			tok.Type = token.LookupIdent(tok.Literal)
 			return tok
-		} else if isDigit(l.ch) {
+		case isDigit(l.ch):
 			tok.Literal = l.readNumber()
 			tok.Type = token.Number
 			return tok
-		} else {
+		default:
 			tok = newToken(token.Illegal, l.ch)
 		}
 	}

@@ -32,9 +32,13 @@ func PrintParserErrors(out io.Writer, errors []string) {
 	}
 }
 
+func makeObjectPointer(obj object.Object) *object.Object {
+	return &obj
+}
+
 func init() {
-	Bases = map[string]object.Object{
-		"cdlOpen": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+	SharedEnv = object.NewEnvironment(&map[string]*object.Object{
+		"cdlOpen": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 1 {
 				return newError("native function cdlOpen: len(args) should be 1")
 			}
@@ -42,8 +46,8 @@ func init() {
 				return &object.Integer{Value: int64(uintptr(C.dlopen(C.CString(string(str.Value)), 1)))}
 			}
 			return newError("native function cdlOpen: arg should be String")
-		}},
-		"cdlSym": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		}}),
+		"cdlSym": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 2 {
 				return newError("native function cdlSym: len(args) should be 2")
 			}
@@ -53,15 +57,15 @@ func init() {
 						C.dlsym(unsafe.Pointer(uintptr(i.Value)), C.CString(string(str.Value))),
 					)), 10)
 					c := code(`
-						std().CFunctionP(` + s + `);
+						#().CFunctionP(` + s + `);
 					`, env)
 					return c
 				}
 				return newError("native function cdlSym: args[1] should be String")
 			}
 			return newError("native function cdlSym: args[0] should be Int")
-		}},
-		"cdlCall": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		}}),
+		"cdlCall": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 4 {
 				return newError("native function cdlCall: len(args) should be 3")
 			}
@@ -79,22 +83,22 @@ func init() {
 				return newError("native function cdlCall: args[1] should be Array")
 			}
 			return newError("native function cdlSym: args[0] should be Int")
-		}},
-		"super": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		}}),
+		"super": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 2 {
 				return newError("native function super: len(args) should be 2")
 			}
 			return applyIndex(args[0], []object.Object{args[1]}, Super, env)
-		}},
-		"current": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		}}),
+		"current": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 2 {
 				return newError("native function current: len(args) should be 2")
 			}
 			return applyIndex(args[0], []object.Object{args[1]}, Current, env)
 			//TODO: here is a bug on Current
 			//TODO: Maybe Not, because of @class is not defined
-		}},
-		"classType": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		}}),
+		"classType": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 1 {
 				return newError("native function classType: len(args) should be 1")
 			}
@@ -102,8 +106,8 @@ func init() {
 				return &object.String{Value: []rune(classType(h))}
 			}
 			return newError("native function classType: arg should be Hash")
-		}},
-		"call": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		}}),
+		"call": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 2 {
 				return newError("native function call: len(args) should be 2")
 			}
@@ -112,8 +116,8 @@ func init() {
 				return applyCall(args[0], arr.Elements, env)
 			}
 			return newError("native function call: args[1] should be Array")
-		}},
-		"subscript": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		}}),
+		"subscript": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 2 {
 				return newError("native function subscript: len(args) should be 2")
 			}
@@ -122,20 +126,20 @@ func init() {
 				return applyIndex(args[0], arr.Elements, Default, env)
 			}
 			return newError("native function subscript: args[1] should be Array")
-		}},
-		"len": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		}}),
+		"len": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 1 {
 				return newError("native function len: len(args) should be 1")
 			}
 			return getLen(object.UnwrapReferenceValue(args[0]), env)
-		}},
-		"print": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		}}),
+		"print": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			for _, arg := range args {
 				fmt.Print(string(toString(object.UnwrapReferenceValue(arg), env).(*object.String).Value))
 			}
 			return object.VoidObj
-		}},
-		"input": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		}}),
+		"input": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 0 {
 				return newError("native function input: len(args) should be 0")
 			}
@@ -143,8 +147,8 @@ func init() {
 			_, _ = fmt.Scanf("%s", &input)
 
 			return &object.String{Value: []rune(input)}
-		}},
-		"printLine": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		}}),
+		"printLine": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) == 0 {
 				fmt.Println()
 				return object.VoidObj
@@ -153,23 +157,23 @@ func init() {
 				fmt.Println(string(toString(object.UnwrapReferenceValue(arg), env).(*object.String).Value))
 			}
 			return object.VoidObj
-		}},
-		"inputLine": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		}}),
+		"inputLine": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 0 {
 				return newError("native function inputLine: len(args) should be 0")
 			}
 			data, _, _ := bufio.NewReader(os.Stdin).ReadLine()
 
 			return &object.String{Value: []rune(string(data))}
-		}},
-		"string": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		}}),
+		"string": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 1 {
 				return newError("native function string: len(args) should be 1")
 			}
 			un := object.UnwrapReferenceValue(args[0])
 			return toString(un, env)
-		}},
-		"exit": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		}}),
+		"exit": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 1 && len(args) != 0 {
 				return newError("native function exit: len(args) should be 1 or 0")
 			}
@@ -182,8 +186,8 @@ func init() {
 			}
 			os.Exit(0)
 			return object.VoidObj
-		}},
-		"eval": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		}}),
+		"eval": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 1 {
 				return newError("native function eval: len(args) should be 1")
 			}
@@ -202,8 +206,8 @@ func init() {
 			}
 
 			return newError("native function eval: arg should be String")
-		}},
-		"integer": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		}}),
+		"integer": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 1 {
 				return newError("native function int: len(args) should be 1")
 			}
@@ -235,9 +239,9 @@ func init() {
 			default:
 				return newError("native function integer: arg should be String, Boolean, Number or object.VoidObj")
 			}
-		}},
+		}}),
 
-		"float": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		"float": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 1 {
 				return newError("native function float: len(args) should be 1")
 			}
@@ -269,16 +273,16 @@ func init() {
 			default:
 				return newError("native function int: arg should be String, Boolean, Number or object.VoidObj")
 			}
-		}},
+		}}),
 
-		"boolean": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		"boolean": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 1 {
 				return newError("native function boolean: len(args) should be 1")
 			}
 			return toBoolean(object.UnwrapReferenceValue(args[0]))
-		}},
+		}}),
 
-		"fetch": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		"fetch": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 1 {
 				return newError("native function fetch: len(args) should be 1")
 			}
@@ -286,9 +290,9 @@ func init() {
 				return &object.String{Value: []rune(err.Inspect(16))}
 			}
 			return args[0]
-		}},
+		}}),
 
-		"append": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		"append": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 2 {
 				return newError("native function append: len(args) should be 2")
 			}
@@ -296,9 +300,9 @@ func init() {
 				return &object.Array{Elements: append(array.Elements, object.UnwrapReferenceValue(args[1])), Copyable: true}
 			}
 			return newError("native function append: args[0] should be Array")
-		}},
+		}}),
 
-		"first": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		"first": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 1 {
 				return newError("native function first: len(args) should be 1")
 			}
@@ -314,9 +318,9 @@ func init() {
 				return &object.Reference{Value: &array.Elements[0], Const: constObj}
 			}
 			return newError("native function first: arg should be Array")
-		}},
+		}}),
 
-		"last": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		"last": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 1 {
 				return newError("native function fetch: len(args) should be 1")
 			}
@@ -332,9 +336,9 @@ func init() {
 				return &object.Reference{Value: &array.Elements[len(array.Elements)-1], Const: constObj}
 			}
 			return newError("native function append: arg should be Array")
-		}},
+		}}),
 
-		"typeFull": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		"typeFull": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 1 {
 				return newError("native function typeFull: len(args) should be 1")
 			}
@@ -350,23 +354,23 @@ func init() {
 				return &object.String{Value: []rune(isConst + "Reference (" + rawType + ")")}
 			}
 			return &object.String{Value: []rune(args[0].Type())}
-		}},
+		}}),
 
-		"type": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		"type": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 1 {
 				return newError("native function type: len(args) should be 1")
 			}
 			return &object.String{Value: []rune(object.UnwrapReferenceValue(args[0]).Type())}
-		}},
+		}}),
 
-		"typeC": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		"typeC": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 1 {
 				return newError("native function type: len(args) should be 1")
 			}
 			return &object.String{Value: []rune(object.UnwrapReferenceValue(args[0]).TypeC())}
-		}},
+		}}),
 
-		"array": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		"array": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) == 1 {
 				if length, ok := object.UnwrapReferenceValue(args[0]).(*object.Integer); ok {
 					var elem []object.Object
@@ -416,23 +420,23 @@ func init() {
 				return newError("native function array: args[0] should be Integer")
 			}
 			return newError("native function array: len(args) should be 1, 2 or 3")
-		}},
+		}}),
 
-		"value": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		"value": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 1 {
 				return newError("native function value: len(args) should be 1")
 			}
 			return object.UnwrapReferenceValue(args[0])
-		}},
+		}}),
 
-		"echo": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		"echo": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 1 {
 				return newError("native function echo: len(args) should be 1")
 			}
 			return args[0]
-		}},
+		}}),
 
-		"error": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		"error": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 1 {
 				return newError("native function error: len(args) should be 1")
 			}
@@ -441,11 +445,43 @@ func init() {
 			} else {
 				return newError("native function error: arg should be String")
 			}
-		}},
+		}}),
 
-		"std": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
-			return code(`
-				{
+		"import": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+			if len(args) != 1 {
+				return newError("native function import: len(args) should be 1")
+			}
+			if str, ok := object.UnwrapReferenceValue(args[0]).(*object.String); ok {
+				data, err := ioutil.ReadFile(string(str.Value))
+				if err != nil {
+					return newError("unable to read file %s: %s", string(str.Value), err.Error())
+				}
+				l := lexer.New(string(data))
+				p := parser.New(l)
+
+				program := p.ParseProgram()
+				if len(p.Errors()) != 0 {
+					PrintParserErrors(os.Stdout, p.Errors())
+					return newError("error inner import")
+				}
+
+				importEnv := SharedEnv.NewEnclosedEnvironment()
+				result := Eval(program, importEnv)
+				if isError(result) {
+					return result
+				}
+				if export, ok := importEnv.Get("export"); ok {
+					return *export
+				}
+				return object.VoidObj
+				//return newError("native function import: export obj not found")
+			}
+			return newError("native function import: arg should be String")
+		}}),
+	})
+	SharedEnv.SetCurrent("#", code(`
+			func() {
+				ret {
 					"C": {
 						"@[]": func(args) {
 							ret cdlSym(-2, args[0]);
@@ -469,11 +505,11 @@ func init() {
 							if (classType self == "Proto") {
 								ret { "@template": value(self), "id": value(args[0]) };
 							} else if (classType self == "Instance") {
-								ret call(std().CFunction(self.id, "void"), args);
+								ret call(#().CFunction(self.id, "void"), args);
 							};
 						},
 						"@[]": func(args, self) {
-							ret std().CFunction(self.id, args[0]);
+							ret #().CFunction(self.id, args[0]);
 						}
 					},
 					"CFunction": {
@@ -503,7 +539,7 @@ func init() {
 						if (len(args) == 0) {
 							ret void;
 						};
-						if (len(args) == 1 and type(args[0]) == "ARRAY") {
+						if (len(args) == 1 and type(args[0]) == "Array") {
 							if (len(args[0]) == 0) {
 								ret void;
 							};
@@ -513,7 +549,7 @@ func init() {
 							};
 							ret maximum;
 						} else {
-							ret std.max(args);
+							ret #().max(args);
 						};
 					},
 				
@@ -521,7 +557,7 @@ func init() {
 						if (len(args) == 0) {
 							ret void;
 						};
-						if (len(args) == 1 and type(args[0]) == "ARRAY") {
+						if (len(args) == 1 and type(args[0]) == "Array") {
 							if (len(args[0]) == 0) {
 								ret void;
 							};
@@ -531,7 +567,7 @@ func init() {
 							};
 							ret minimum;
 						} else {
-							ret std.min(args);
+							ret #().min(args);
 						};
 					},
 				
@@ -547,11 +583,11 @@ func init() {
 							ret void;
 						};
 						let L = 0;
-						let R = std.max(1, args[0]);
-						ret int((loop (R - L >= 1e-12) {
+						let R = #().max(1, args[0]);
+						ret integer((loop (R - L >= 1e-12) {
 							let M = (L + R) / 2;
 							let K = M * M;
-							if (std.abs(K - args[0]) <= 1e-12) {
+							if (#().abs(K - args[0]) <= 1e-12) {
 								out M;
 							};
 							if (K > args[0]) {
@@ -566,51 +602,16 @@ func init() {
 						printLine();
 						printLine("TLang by mark07x");
 						printLine("T Language v0.1");
-						printLine();
-						printLine("std.tl by mark07x");
-						printLine("TLang Standard Library v1.0");
+						printLine("TLang Standard Library v0.1");
 						printLine();
 						printLine("Hello World, Mark!");
 						printLine();
 					}
-				};`, env)
-		}},
-
-		"import": &object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
-			if len(args) != 1 {
-				return newError("native function import: len(args) should be 1")
-			}
-			if str, ok := object.UnwrapReferenceValue(args[0]).(*object.String); ok {
-				data, err := ioutil.ReadFile(string(str.Value))
-				if err != nil {
-					return newError("unable to read file %s: %s", string(str.Value), err.Error())
-				}
-				l := lexer.New(string(data))
-				p := parser.New(l)
-
-				program := p.ParseProgram()
-				if len(p.Errors()) != 0 {
-					PrintParserErrors(os.Stdout, p.Errors())
-					return newError("error inner import")
-				}
-
-				importEnv := object.NewEnvironment(Bases)
-				result := Eval(program, importEnv)
-				if isError(result) {
-					return result
-				}
-				if export, ok := importEnv.Get("export"); ok {
-					return *export
-				}
-				return object.VoidObj
-				//return newError("native function import: export obj not found")
-			}
-			return newError("native function import: arg should be String")
-		}},
-	}
+				};
+			};`, SharedEnv))
 }
 
-var Bases map[string]object.Object
+var SharedEnv *object.Environment
 
 func newError(format string, a ...interface{}) *object.Err {
 	return &object.Err{Message: fmt.Sprintf(format, a...)}
@@ -697,7 +698,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 		args := evalExpressions(node.Arguments, env, false)
 		if len(args) == 1 && isError(args[0]) {
-			if function != Bases["fetch"] {
+			f, _ := SharedEnv.Get("fetch")
+			if function != *f {
 				return args[0]
 			}
 		}
@@ -1010,11 +1012,11 @@ func applyCdlCall(id int64, argsType []object.Object, argsValue []object.Object,
 		case "long long":
 			return &object.Integer{Value: *(*int64)(rc)}
 		case "int":
-			return code("std().CType(" + strconv.Itoa(*(*int)(rc)) + ", \"int\");", env)
+			return code("#().CType(" + strconv.Itoa(*(*int)(rc)) + ", \"int\");", env)
 		case "double":
 			return &object.Float{Value: *(*float64)(rc)}
 		case "pointer":
-			return code("std().CType(" + strconv.FormatInt(int64(uintptr(*(*unsafe.Pointer)(rc))), 10) + ", \"pointer\");", env)
+			return code("#().CType(" + strconv.FormatInt(int64(uintptr(*(*unsafe.Pointer)(rc))), 10) + ", \"pointer\");", env)
 		default:
 			return object.VoidObj
 		}

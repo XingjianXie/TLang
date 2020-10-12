@@ -1,28 +1,18 @@
 package object
 
 func (e *Environment) NewEnclosedEnvironment() *Environment {
-	env := newEnvironment()
+	sp := make(map[string]*Object)
+	env := NewEnvironment(&sp)
 	env.outer = e
 	return env
 }
 
-func newEnvironment() *Environment {
-	s := make(map[string]*Object)
-	return &Environment{store: s, outer: nil}
-}
-
-func NewEnvironment(bases map[string]Object) *Environment {
-	o := newEnvironment()
-	for s, base := range bases {
-		o.SetCurrent(s, base)
-	}
-
-	s := make(map[string]*Object)
-	return &Environment{store: s, outer: o}
+func NewEnvironment(mp *map[string]*Object) *Environment {
+	return &Environment{store: mp, outer: nil}
 }
 
 type Environment struct {
-	store map[string]*Object
+	store *map[string]*Object
 	outer *Environment
 }
 
@@ -32,7 +22,7 @@ func (e *Environment) TypeC() TypeC      { return INVALID }
 func (e *Environment) Copy() Object    { return e }
 
 func (e *Environment) Get(name string) (*Object, bool) {
-	obj, ok := e.store[name]
+	obj, ok := (*e.store)[name]
 	if !ok && e.outer != nil {
 		obj, ok = e.outer.Get(name)
 	}
@@ -41,11 +31,11 @@ func (e *Environment) Get(name string) (*Object, bool) {
 
 func (e *Environment) DoAlloc(Index Object) (*Object, bool) {
 	if envIndex, ok := Index.(*String); ok {
-		if _, ok := e.store[string(envIndex.Value)]; ok {
+		if _, ok := (*e.store)[string(envIndex.Value)]; ok {
 			return nil, false
 		}
 		var obj Object = nil
-		e.store[string(envIndex.Value)] = &obj
+		(*e.store)[string(envIndex.Value)] = &obj
 		return &obj, true
 	}
 	return nil, false
@@ -61,9 +51,9 @@ func (e *Environment) SetCurrent(name string, val Object) (*Object, bool) {
 
 func (e *Environment) DeAlloc(Index Object) bool {
 	if envIndex, ok := Index.(*String); ok {
-		_, ok := e.store[string(envIndex.Value)]
+		_, ok := (*e.store)[string(envIndex.Value)]
 		if ok {
-			delete(e.store, string(envIndex.Value))
+			delete(*e.store, string(envIndex.Value))
 			return true
 		}
 		if !ok && e.outer != nil {

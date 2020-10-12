@@ -19,7 +19,7 @@ func main() {
 			print(err)
 			os.Exit(1)
 		}
-		env := object.NewEnvironment(evaluator.Bases)
+		env := evaluator.SharedEnv.NewEnclosedEnvironment()
 		l := lexer.New(string(data))
 		p := parser.New(l)
 

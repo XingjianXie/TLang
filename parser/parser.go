@@ -80,6 +80,9 @@ func (p *Parser) registerInfix(tokenType token.Type, fn infixParseFn) {
 }
 
 func (p *Parser) parseIdentifier() ast.Expression {
+	if p.curToken.Literal[0] == '#' && p.curToken.Literal != "#" {
+		return &ast.DotExpression{Token: p.curToken, Left: &ast.Identifier{Token: p.curToken, Value: "#"}, Right: &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal[1:]}}
+	}
 	return &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
 }
 

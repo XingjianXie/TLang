@@ -57,7 +57,7 @@ func init() {
 						C.dlsym(unsafe.Pointer(uintptr(i.Value)), C.CString(string(str.Value))),
 					)), 10)
 					c := code(`
-						#().CFunctionP(` + s + `);
+						#.CFunctionP(` + s + `);
 					`, env)
 					return c
 				}
@@ -480,8 +480,7 @@ func init() {
 		}}),
 	})
 	SharedEnv.SetCurrent("#", code(`
-			func() {
-				ret {
+				 {
 					"C": {
 						"@[]": func(args) {
 							ret cdlSym(-2, args[0]);
@@ -505,11 +504,11 @@ func init() {
 							if (classType self == "Proto") {
 								ret { "@template": value(self), "id": value(args[0]) };
 							} else if (classType self == "Instance") {
-								ret call(#().CFunction(self.id, "void"), args);
+								ret call(#.CFunction(self.id, "void"), args);
 							};
 						},
 						"@[]": func(args, self) {
-							ret #().CFunction(self.id, args[0]);
+							ret #.CFunction(self.id, args[0]);
 						}
 					},
 					"CFunction": {
@@ -549,7 +548,7 @@ func init() {
 							};
 							ret maximum;
 						} else {
-							ret #().max(args);
+							ret #.max(args);
 						};
 					},
 				
@@ -567,7 +566,7 @@ func init() {
 							};
 							ret minimum;
 						} else {
-							ret #().min(args);
+							ret #.min(args);
 						};
 					},
 				
@@ -583,11 +582,11 @@ func init() {
 							ret void;
 						};
 						let L = 0;
-						let R = #().max(1, args[0]);
+						let R = #.max(1, args[0]);
 						ret integer((loop (R - L >= 1e-12) {
 							let M = (L + R) / 2;
 							let K = M * M;
-							if (#().abs(K - args[0]) <= 1e-12) {
+							if (#.abs(K - args[0]) <= 1e-12) {
 								out M;
 							};
 							if (K > args[0]) {
@@ -607,8 +606,7 @@ func init() {
 						printLine("Hello World, Mark!");
 						printLine();
 					}
-				};
-			};`, SharedEnv))
+				};`, SharedEnv))
 }
 
 var SharedEnv *object.Environment
@@ -1012,11 +1010,11 @@ func applyCdlCall(id int64, argsType []object.Object, argsValue []object.Object,
 		case "long long":
 			return &object.Integer{Value: *(*int64)(rc)}
 		case "int":
-			return code("#().CType(" + strconv.Itoa(*(*int)(rc)) + ", \"int\");", env)
+			return code("#.CType(" + strconv.Itoa(*(*int)(rc)) + ", \"int\");", env)
 		case "double":
 			return &object.Float{Value: *(*float64)(rc)}
 		case "pointer":
-			return code("#().CType(" + strconv.FormatInt(int64(uintptr(*(*unsafe.Pointer)(rc))), 10) + ", \"pointer\");", env)
+			return code("#.CType(" + strconv.FormatInt(int64(uintptr(*(*unsafe.Pointer)(rc))), 10) + ", \"pointer\");", env)
 		default:
 			return object.VoidObj
 		}

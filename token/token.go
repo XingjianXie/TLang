@@ -35,68 +35,68 @@ func LookupIdent(ident string) Type {
 }
 
 const (
-	Illegal = "Illegal"
-	Eof     = "Eof"
+	Illegal Type = "Illegal"
+	Eof  Type   = "Eof"
 
 	// Identifiers + literals
-	Ident     = "Ident"     // add, foobar, x, y, ...
-	Number    = "Number"    // 1343456
-	String    = "String"    // "Hello World"
-	Character = "Character" // '1'
+	Ident   Type  = "Ident"     // add, foobar, x, y, ...
+	Number  Type  = "Number"    // 1343456
+	String  Type  = "String"    // "Hello World"
+	Character Type = "Character" // '1'
 
 	// Operators
-	Assign     = "="
-	Plus       = "+"
-	Minus      = "-"
-	Asterisk   = "*"
-	Slash      = "/"
-	Percentage = "%"
-	Bang       = "!"
-	Dot        = "."
+	Assign  Type   = "="
+	Plus    Type   = "+"
+	Minus   Type   = "-"
+	Asterisk Type  = "*"
+	Slash   Type   = "/"
+	Percentage Type = "%"
+	Bang   Type    = "!"
+	Dot    Type    = "."
 
-	Lt = "<"
-	Gt = ">"
+	Lt Type = "<"
+	Gt Type = ">"
 
-	Eq    = "=="
-	NotEq = "!="
+	Eq Type   = "=="
+	NotEq Type = "!="
 
-	PlusEq       = "+="
-	MinusEq      = "-="
-	AsteriskEq   = "*="
-	SlashEq      = "/="
-	PercentageEq = "%="
+	PlusEq    Type   = "+="
+	MinusEq   Type   = "-="
+	AsteriskEq Type  = "*="
+	SlashEq    Type  = "/="
+	PercentageEq Type = "%="
 
-	LtEq = "<="
-	GtEq = ">="
+	LtEq Type = "<="
+	GtEq Type = ">="
 
 	// Delimiters
-	Comma     = ","
-	Semicolon = ";"
-	Colon     = ":"
+	Comma  Type   = ","
+	Semicolon Type = ";"
+	Colon Type    = ":"
 
-	Lparen   = "("
-	Rparen   = ")"
-	Lbrace   = "{"
-	Rbrace   = "}"
-	Lbracket = "["
-	Rbracket = "]"
+	Lparen Type  = "("
+	Rparen Type  = ")"
+	Lbrace  Type = "{"
+	Rbrace  Type = "}"
+	Lbracket Type = "["
+	Rbracket Type = "]"
 
 	// Keywords
-	Function  = "Function"
-	Let       = "Let"
-	Ref       = "Ref"
-	True      = "True"
-	False     = "False"
-	Void      = "Void"
-	If        = "If"
-	Else      = "Else"
-	Loop      = "Loop"
-	Out       = "Out"
-	Jump      = "Jump"
-	Ret       = "Ret"
-	Underline = "Underline"
-	In        = "In"
-	And       = "And"
-	Or        = "Or"
-	Del       = "Del"
+	Function Type  = "Function"
+	Let  Type     = "Let"
+	Ref   Type    = "Ref"
+	True   Type   = "True"
+	False  Type   = "False"
+	Void   Type   = "Void"
+	If     Type   = "If"
+	Else  Type    = "Else"
+	Loop   Type   = "Loop"
+	Out    Type   = "Out"
+	Jump   Type   = "Jump"
+	Ret    Type   = "Ret"
+	Underline Type = "Underline"
+	In    Type    = "In"
+	And   Type    = "And"
+	Or    Type    = "Or"
+	Del    Type   = "Del"
 )

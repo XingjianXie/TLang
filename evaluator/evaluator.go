@@ -22,6 +22,18 @@ import (
 #include <dlfcn.h>
 #include <ffi.h>
 #include <string.h>
+#include <memory.h>
+#include <stdlib.h>
+
+void * TStringObj(void * ptr) {
+	return ptr;
+}
+
+void * CStringPtr(void * ptr) {
+	void * str = malloc(sizeof(char *) * strlen(ptr));
+    memcpy(str, ptr, strlen(ptr));
+	return str;
+}
  */
 import "C"
 
@@ -57,7 +69,7 @@ func init() {
 						C.dlsym(unsafe.Pointer(uintptr(i.Value)), C.CString(string(str.Value))),
 					)), 10)
 					c := code(`
-						#.CFunctionP(` + s + `);
+						#.CFunction(` + s + `, "void");
 					`, env)
 					return c
 				}
@@ -481,9 +493,25 @@ func init() {
 	})
 	SharedEnv.SetCurrent("#", code(`
 				 {
+					"commonRetType": {
+						"TStringObj": "string",
+						"CStringPtr": "pointer",
+						"malloc": "pointer",
+						"fopen": "pointer",
+						"printf": "int",
+						"scanf": "int",
+						"fprintf": "int",
+						"fscanf": "int",
+						"abs": "int",
+						"fabs": "double",
+						"sqrt": "double",
+						"@[]": _ { ret "void"; }
+					},
 					"C": {
 						"@[]": func(args) {
-							ret cdlSym(-2, args[0]);
+							let f = cdlSym(-2, args[0]);
+							f.retType = #commonRetType[args[0]];
+							ret f;
 						}
 					},
 					"CType": {
@@ -498,19 +526,6 @@ func init() {
 							};
 						}
 					},
-					"CFunctionP": {
-						"@class": "CFunctionP",
-						"@()": func(args, self) {
-							if (classType self == "Proto") {
-								ret { "@template": value(self), "id": value(args[0]) };
-							} else if (classType self == "Instance") {
-								ret call(#.CFunction(self.id, "void"), args);
-							};
-						},
-						"@[]": func(args, self) {
-							ret #.CFunction(self.id, args[0]);
-						}
-					},
 					"CFunction": {
 						"@class": "CFunction",
 						"@()": func(args, self) {
@@ -518,17 +533,15 @@ func init() {
 								ret { "@template": value(self), "id": value(args[0]), "retType": value(args[1]) };
 							} else if (classType self == "Instance") {
 								let tps = [];
-								let ags = args;
-								loop v in ags {
-									tps = append(tps, 
-										if (type v == "Hash") {
-											let r = v.cType;
-											v = v.raw;
-											r;
-										} else {
-											typeC v;
-										}
-									);
+								let ags = [];
+								loop v in args {
+									if (type v == "Hash") {
+										tps = append(tps, v.cType);
+										ags = append(ags, v.raw);
+									} else {
+										tps = append(tps, typeC v);
+										ags = append(ags, v);
+									};
 								};
 								ret cdlCall(self.id, tps, ags, self.retType);
 							};
@@ -930,6 +943,10 @@ func applyCdlCall(id int64, argsType []object.Object, argsValue []object.Object,
 	var argsTypeFFIRaw = C.malloc(C.ulong(C.sizeof_size_t * l))
 	var argsValueFFIRaw = C.malloc(C.ulong(C.sizeof_size_t * l))
 
+	defer C.free(unsafe.Pointer(cif))
+	defer C.free(argsTypeFFIRaw)
+	defer C.free(argsValueFFIRaw)
+
 	var argsTypeFFI = *(*[]*C.ffi_type)(unsafe.Pointer(&reflect.SliceHeader{
 		Data: uintptr(argsTypeFFIRaw),
 		Len:  l,
@@ -943,40 +960,44 @@ func applyCdlCall(id int64, argsType []object.Object, argsValue []object.Object,
 	for i := 0; i < l; i++ {
 		if str, ok := argsType[i].(*object.String); ok {
 			typeName := object.TypeC(str.Value)
+			var cMem unsafe.Pointer
+			defer C.free(cMem)
 			switch typeName {
 			case "long long":
 				argsTypeFFI[i] = &C.ffi_type_sint64
-				cMem := C.malloc(C.sizeof_longlong)
-				*(*int64)(unsafe.Pointer(cMem)) = object.UnwrapReferenceValue(argsValue[i]).(*object.Integer).Value
+				cMem = C.malloc(C.sizeof_longlong)
+				*(*int64)(cMem) = object.UnwrapReferenceValue(argsValue[i]).(*object.Integer).Value
 				argsValueFFI[i] = cMem
 			case "int":
 				sint := C.ffi_type_sint
 				argsTypeFFI[i] = &sint
-				cMem := C.malloc(C.sizeof_int)
-				*(*int)(unsafe.Pointer(cMem)) = int(object.UnwrapReferenceValue(argsValue[i]).(*object.Integer).Value)
+				cMem = C.malloc(C.sizeof_int)
+				*(*int)(cMem) = int(object.UnwrapReferenceValue(argsValue[i]).(*object.Integer).Value)
 				argsValueFFI[i] = cMem
 			case "double":
 				argsTypeFFI[i] = &C.ffi_type_double
-				cMem := C.malloc(C.sizeof_double)
-				*(*float64)(unsafe.Pointer(cMem)) = object.UnwrapReferenceValue(argsValue[i]).(*object.Float).Value
+				cMem = C.malloc(C.sizeof_double)
+				*(*float64)(cMem) = object.UnwrapReferenceValue(argsValue[i]).(*object.Float).Value
 				argsValueFFI[i] = cMem
-			case "pointer":
+			case "pointer", "string":
 				argsTypeFFI[i] = &C.ffi_type_pointer
-				cMem := C.malloc(C.sizeof_size_t)
+				cMem = C.malloc(C.sizeof_size_t)
 				switch v := object.UnwrapReferenceValue(argsValue[i]).(type) {
 				case *object.Integer:
-					*(*unsafe.Pointer)(unsafe.Pointer(cMem)) = unsafe.Pointer(uintptr(v.Value))
+					*(*unsafe.Pointer)(cMem) = unsafe.Pointer(uintptr(v.Value))
 				case *object.String:
-					*(*unsafe.Pointer)(unsafe.Pointer(cMem)) = unsafe.Pointer(C.CString(string(v.Value)))
+					p := unsafe.Pointer(C.CString(string(v.Value)))
+					*(*unsafe.Pointer)(cMem) = p
+					defer C.free(p)
 				default:
-					*(*unsafe.Pointer)(unsafe.Pointer(cMem)) = unsafe.Pointer(uintptr(0))
+					*(*unsafe.Pointer)(cMem) = unsafe.Pointer(uintptr(0))
 				}
 				argsValueFFI[i] = cMem
 			default:
 				sint := C.ffi_type_sint
 				argsTypeFFI[i] = &sint
-				cMem := C.malloc(C.sizeof_int)
-				*(*int)(unsafe.Pointer(cMem)) = 0
+				cMem = C.malloc(C.sizeof_int)
+				*(*int)(cMem) = 0
 				argsValueFFI[i] = cMem
 			}
 		} else {
@@ -984,6 +1005,7 @@ func applyCdlCall(id int64, argsType []object.Object, argsValue []object.Object,
 		}
 	}
 	var rc unsafe.Pointer
+	defer C.free(rc)
 	var rt *C.ffi_type
 	switch retType {
 	case "long long":
@@ -996,7 +1018,7 @@ func applyCdlCall(id int64, argsType []object.Object, argsValue []object.Object,
 	case "double":
 		rc = C.malloc(C.sizeof_double)
 		rt = &C.ffi_type_double
-	case "pointer":
+	case "pointer", "string":
 		rc = C.malloc(C.sizeof_size_t)
 		rt = &C.ffi_type_pointer
 	default:
@@ -1015,6 +1037,8 @@ func applyCdlCall(id int64, argsType []object.Object, argsValue []object.Object,
 			return &object.Float{Value: *(*float64)(rc)}
 		case "pointer":
 			return code("#.CType(" + strconv.FormatInt(int64(uintptr(*(*unsafe.Pointer)(rc))), 10) + ", \"pointer\");", env)
+		case "string":
+			return &object.String{Value: []rune(C.GoString(*(**C.char)(rc)))}
 		default:
 			return object.VoidObj
 		}

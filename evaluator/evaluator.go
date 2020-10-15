@@ -493,6 +493,36 @@ func init() {
 	})
 	SharedEnv.SetCurrent("#", code(`
 				 {
+					"array": func(n, v, ic) {
+						if (type ic == "Void") {
+							ret array(n, v);
+						};
+						ret array(n, v - ic, func(i, v) { ret v + ic; });
+					},
+					"range": func(n, v, ic) {
+						let dv = v;
+						if (type dv == "Void") {
+							dv = 0;
+						};
+						let dic = ic;
+						if (type dic == "Void") {
+							dic = 1;
+						};
+						ret #Range(n, func(x) { ret dv + x * dic; });
+					},
+					"Range": {
+						"@class": "Range",
+						"@()": func(args, self) {
+							if (classType self == "Proto") {
+								ret { "@template": value(self), "@len": func() { ret args[0]; }, "relation": args[1] };
+							};
+						},
+						"@[]": func(args, self) {
+							if (classType self == "Instance") {
+								ret self.relation(args[0]);
+							};
+						}
+					},
 					"commonRetType": {
 						"TStringObj": "string",
 						"CStringPtr": "pointer",
@@ -519,9 +549,9 @@ func init() {
 						"@()": func(args, self) {
 							if (classType self == "Proto") {
 								if (len args == 1) {
-									ret { "@template": self, "cType": typeC(args[0]), "raw": args[0] };
+									ret { "@template": value(self), "cType": typeC(args[0]), "raw": args[0] };
 								} else if (len args == 2) {
-									ret { "@template": self, "cType": value(args[1]), "raw": args[0] };
+									ret { "@template": value(self), "cType": value(args[1]), "raw": args[0] };
 								};
 							};
 						}

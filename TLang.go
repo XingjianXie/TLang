@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/mark07x/TLang/evaluator"
 	"github.com/mark07x/TLang/lexer"
-	"github.com/mark07x/TLang/object"
 	"github.com/mark07x/TLang/parser"
 	"github.com/mark07x/TLang/repl"
 	"io"
@@ -30,8 +29,8 @@ func main() {
 		}
 
 		evaluated := evaluator.Eval(program, env)
-		if evaluated.Type() == object.ERR {
-			_, _ = io.WriteString(os.Stderr, evaluated.Inspect(16))
+		if evaluated.Type() == evaluator.ERR {
+			_, _ = io.WriteString(os.Stderr, evaluated.Inspect(16, env))
 			_, _ = io.WriteString(os.Stderr, "\n")
 			os.Exit(1)
 		}

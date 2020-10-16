@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/mark07x/TLang/evaluator"
 	"github.com/mark07x/TLang/lexer"
-	"github.com/mark07x/TLang/object"
 	"github.com/mark07x/TLang/parser"
 	"io"
 )
@@ -47,8 +46,8 @@ func Start(in io.Reader, out io.Writer) {
 		}
 
 		evaluated := evaluator.Eval(program, env)
-		if evaluated != object.VoidObj {
-			_, _ = io.WriteString(out, evaluated.Inspect(2))
+		if evaluated != evaluator.VoidObj {
+			_, _ = io.WriteString(out, evaluated.Inspect(2, env))
 			_, _ = io.WriteString(out, "\n")
 		}
 	}

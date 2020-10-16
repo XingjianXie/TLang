@@ -1,4 +1,4 @@
-package object
+package evaluator
 
 func (e *Environment) NewEnclosedEnvironment() *Environment {
 	sp := make(map[string]*Object)
@@ -16,7 +16,7 @@ type Environment struct {
 	outer *Environment
 }
 
-func (e *Environment) Inspect(num int) string { return "(ENV)" }
+func (e *Environment) Inspect(num int, env *Environment) string { return "(ENV)" }
 func (e *Environment) Type() Type             { return ENVIRONMENT }
 func (e *Environment) TypeC() TypeC           { return INVALID }
 func (e *Environment) Copy() Object           { return e }

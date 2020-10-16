@@ -1,4 +1,4 @@
-package object
+package evaluator
 
 import (
 	"bytes"
@@ -89,7 +89,7 @@ func UnwrapReferenceValue(obj Object) Object {
 type Object interface {
 	Type() Type
 	TypeC() TypeC
-	Inspect(num int) string
+	Inspect(num int, env *Environment) string
 	Copy() Object
 }
 
@@ -128,7 +128,7 @@ type Integer struct {
 	Value int64
 }
 
-func (i *Integer) Inspect(num int) string { return fmt.Sprintf("%d", i.Value) }
+func (i *Integer) Inspect(num int, env *Environment) string { return fmt.Sprintf("%d", i.Value) }
 func (i *Integer) Type() Type             { return INTEGER }
 func (i *Integer) TypeC() TypeC           { return INT64 }
 func (i *Integer) Copy() Object           { return i }
@@ -141,7 +141,7 @@ type Float struct {
 	Value float64
 }
 
-func (f *Float) Inspect(num int) string { return fmt.Sprintf("%g", f.Value) }
+func (f *Float) Inspect(num int, env *Environment) string { return fmt.Sprintf("%g", f.Value) }
 func (f *Float) Type() Type             { return FLOAT }
 func (f *Float) TypeC() TypeC           { return FLOAT64 }
 func (f *Float) Copy() Object           { return f }
@@ -151,7 +151,7 @@ type Boolean struct {
 	Value bool
 }
 
-func (b *Boolean) Inspect(num int) string { return fmt.Sprintf("%t", b.Value) }
+func (b *Boolean) Inspect(num int, env *Environment) string { return fmt.Sprintf("%t", b.Value) }
 func (b *Boolean) Type() Type             { return BOOLEAN }
 func (b *Boolean) TypeC() TypeC           { return INVALID }
 func (b *Boolean) Copy() Object           { return b }
@@ -161,7 +161,7 @@ func (b *Boolean) HashKey() HashKey {
 
 type Void struct{}
 
-func (v *Void) Inspect(num int) string { return "void" }
+func (v *Void) Inspect(num int, env *Environment) string { return "void" }
 func (v *Void) Type() Type             { return VOID }
 func (v *Void) TypeC() TypeC           { return INT }
 func (v *Void) Copy() Object           { return v }
@@ -173,7 +173,7 @@ type RetValue struct {
 	Value Object
 }
 
-func (rv *RetValue) Inspect(num int) string { return rv.Value.Inspect(num) }
+func (rv *RetValue) Inspect(num int, env *Environment) string { return rv.Value.Inspect(num, env) }
 func (rv *RetValue) Type() Type             { return RET }
 func (rv *RetValue) TypeC() TypeC           { return INVALID }
 func (rv *RetValue) Copy() Object {
@@ -185,7 +185,7 @@ type OutValue struct {
 	Value Object
 }
 
-func (ov *OutValue) Inspect(num int) string { return ov.Value.Inspect(num) }
+func (ov *OutValue) Inspect(num int, env *Environment) string { return ov.Value.Inspect(num, env) }
 func (ov *OutValue) Type() Type             { return OUT }
 func (ov *OutValue) TypeC() TypeC           { return INVALID }
 func (ov *OutValue) Copy() Object {
@@ -195,7 +195,7 @@ func (ov *OutValue) Copy() Object {
 
 type Jump struct{}
 
-func (j *Jump) Inspect(num int) string { return "jump" }
+func (j *Jump) Inspect(num int, env *Environment) string { return "jump" }
 func (j *Jump) Type() Type             { return JUMP }
 func (j *Jump) TypeC() TypeC           { return INVALID }
 func (j *Jump) Copy() Object {
@@ -207,7 +207,7 @@ type Err struct {
 	Message string
 }
 
-func (err *Err) Inspect(num int) string { return "ERROR: " + err.Message }
+func (err *Err) Inspect(num int, env *Environment) string { return "ERROR: " + err.Message }
 func (err *Err) Type() Type             { return ERR }
 func (err *Err) TypeC() TypeC           { return INVALID }
 func (err *Err) Copy() Object {
@@ -222,7 +222,7 @@ type Function struct {
 	Self       Object
 }
 
-func (f *Function) Inspect(num int) string {
+func (f *Function) Inspect(num int, env *Environment) string {
 	if num <= 1 {
 		return "func(...) {...}"
 	}
@@ -251,7 +251,7 @@ type UnderLine struct {
 	Env  *Environment
 }
 
-func (u *UnderLine) Inspect(num int) string {
+func (u *UnderLine) Inspect(num int, env *Environment) string {
 	if num <= 1 {
 		return "_ {...}"
 	}
@@ -271,7 +271,7 @@ type String struct {
 	Value []rune
 }
 
-func (s *String) Inspect(num int) string { return strconv.Quote(string(s.Value)) }
+func (s *String) Inspect(num int, env *Environment) string { return strconv.Quote(string(s.Value)) }
 func (s *String) Type() Type             { return STRING }
 func (s *String) TypeC() TypeC           { return POINTER }
 func (s *String) Copy() Object           { return s }
@@ -284,7 +284,7 @@ type Character struct {
 	Value rune
 }
 
-func (c *Character) Inspect(num int) string { return "'" + string(c.Value) + "'" }
+func (c *Character) Inspect(num int, env *Environment) string { return "'" + string(c.Value) + "'" }
 func (c *Character) Type() Type             { return CHARACTER }
 func (c *Character) TypeC() TypeC           { return INVALID }
 func (c *Character) Copy() Object           { return c }
@@ -297,7 +297,7 @@ type Native struct {
 	Fn func(env *Environment, args []Object) Object
 }
 
-func (n *Native) Inspect(num int) string { return "func [Native]" }
+func (n *Native) Inspect(num int, env *Environment) string { return "func [Native]" }
 func (n *Native) Type() Type             { return NATIVE }
 func (n *Native) TypeC() TypeC           { return INVALID }
 func (n *Native) Copy() Object           { return n }
@@ -308,7 +308,7 @@ type Array struct {
 	Copyable bool
 }
 
-func (a *Array) Inspect(num int) string {
+func (a *Array) Inspect(num int, env *Environment) string {
 	if num <= 0 {
 		return "[...]"
 	}
@@ -316,7 +316,7 @@ func (a *Array) Inspect(num int) string {
 
 	var elements []string
 	for _, e := range a.Elements {
-		elements = append(elements, e.Inspect(num-1))
+		elements = append(elements, e.Inspect(num - 1, env))
 	}
 
 	out.WriteString("[")
@@ -346,7 +346,7 @@ type Reference struct {
 	Const  bool
 }
 
-func (r *Reference) Inspect(num int) string {
+func (r *Reference) Inspect(num int, env *Environment) string {
 	var out bytes.Buffer
 
 	if r.Const {
@@ -354,7 +354,7 @@ func (r *Reference) Inspect(num int) string {
 	}
 	out.WriteString("Reference ")
 	if r.Value != nil {
-		out.WriteString("(" + (*r.Value).Inspect(num) + ")")
+		out.WriteString("(" + (*r.Value).Inspect(num, env) + ")")
 	} else {
 		out.WriteString("(Not Alloc)")
 	}
@@ -403,7 +403,12 @@ func (h *Hash) DeAlloc(Index Object) bool {
 	return false
 }
 
-func (h *Hash) Inspect(num int) string {
+func (h *Hash) Inspect(num int, env *Environment) string {
+	ref := applyIndex(h, []Object{&String{Value: []rune("@inspect")}}, Default, env).(*Reference)
+	if ref.Value != nil {
+		return string(UnwrapReferenceValue(applyCall(ref, []Object{}, env)).(*String).Value)
+	}
+
 	if num <= 0 {
 		return "{...}"
 	}
@@ -412,7 +417,7 @@ func (h *Hash) Inspect(num int) string {
 	var pairs []string
 	for _, pair := range h.Pairs {
 		pairs = append(pairs, fmt.Sprintf("%s: %s",
-			pair.Key.Inspect(num-1), (*pair.Value).Inspect(num-1)))
+			pair.Key.Inspect(num - 1, env), (*pair.Value).Inspect(num - 1, env)))
 	}
 
 	out.WriteString("{ ")

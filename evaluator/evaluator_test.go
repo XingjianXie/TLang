@@ -551,7 +551,7 @@ func TestReference(t *testing.T) {
 		input    string
 		expected int64
 	}{
-		{"let a = 1; ref b = a; b = 4; a;", 4},
+		{"let a = 1; let &b = a; &b = 4; a;", 4},
 
 		{"let a = 1; let b = a; a = 2; b;", 1},
 		{"let a = 0; let b = 0; a = 1; b = a; a = 2; b;", 1},
@@ -563,17 +563,17 @@ func TestReference(t *testing.T) {
 		{"let b = 0; let a = 1; b = a; b = 2; a;", 1},
 		{"let a = 0; a = 1; let b = a; b = 2; a;", 1},
 
-		{"let a = 1; ref b = a; a = 2; b;", 2},
-		{"let a = 0; a = 1; ref b = a; a = 2; b;", 2},
+		{"let a = 1; let &b = a; a = 2; &b;", 2},
+		{"let a = 0; a = 1; let &b = a; a = 2; &b;", 2},
 
-		{"let a = 0; a = 1; ref b = a; b = 4; a;", 4},
+		{"let a = 0; a = 1; let &b = a; &b = 4; a;", 4},
 
 		{"let a = [1,2,3,4,[1,2,3]]; let b = a[4]; b[0] = 2; a[4][0];", 1},
 
-		{"let a = [1,2,3]; ref b = a[0]; b = 4; a[0];", 4},
-		{"let a = 0; a = [1,2,3,4]; ref b = a[1+2-1]; a[2] = 5; b;", 5},
+		{"let a = [1,2,3]; let &b = a[0]; &b = 4; a[0];", 4},
+		{"let a = 0; a = [1,2,3,4]; let &b = a[1+2-1]; a[2] = 5; &b;", 5},
 
-		{"let a = [1,2,3,4,[1,2,3]]; ref b = a[4]; b[0] = 2; a[4][0];", 2},
+		{"let a = [1,2,3,4,[1,2,3]]; let &b = a[4]; &b[0] = 2; a[4][0];", 2},
 
 		{"let x = 3; _{ &args[0] = 4; }(x); x;", 4},
 		{"let x = 3; _{ args[0] + args[1] + args[2]; }(x, x, 5);", 11},
@@ -581,11 +581,11 @@ func TestReference(t *testing.T) {
 		{"let x = 0; func(&a, &b) { &a = 3 + &b; } (x, 5); x;", 8},
 
 		{"let x = 0; func() { x = 4; }(); x;", 4},
-		{"let x = 0; ref y = x; func() { y = 4; }(); integer(y == x and x == 4);", 1},
-		{"let a = 0; ref b = a; func(&t) { &t = 5; }(a); b;", 5},
+		{"let x = 0; let &y = x; func() { &y = 4; }(); integer(&y == x and x == 4);", 1},
+		{"let a = 0; let &b = a; func(&t) { &t = 5; }(a); &b;", 5},
 
 		{"let a = { 1:2, 3:4, 5:6 }; a[1] = 4; a[1];", 4},
-		{"let a = { 1:2, 3:4, 5: 6}; ref b = a[1]; b = 4; a[1];", 4},
+		{"let a = { 1:2, 3:4, 5: 6}; let &b = a[1]; &b = 4; a[1];", 4},
 		{"let a = { 1:2, \"1\":3 }; integer(a[1] == 2 and a[string(1)] == 3);", 1},
 		{"let a = { \"f\": func(self){ret self.q;}, \"q\": 2 }; a.f();", 2},
 		{"integer(type({func(self){ret self;}()) == \"Void\");", 1},
@@ -754,7 +754,7 @@ func TestLoopInExpression(t *testing.T) {
 		expected int64
 	}{
 		{"let a = [5, 2, 3]; let sum = 0; loop obj in a { sum += obj; }; sum;", 10},
-		{"let a = [5, 2, 5]; ref b = a; let sum = 0; loop obj in b { sum += obj; }; sum;", 12},
+		{"let a = [5, 2, 5]; let &b = a; let sum = 0; loop obj in &b { sum += obj; }; sum;", 12},
 		{"let a = array(5, 0, _ { args[1] + 1; }); let sum = 0; loop obj in a { sum += obj; }; sum;", 15},
 		{"let a = array(5, 0, _ { args[1] + 2; }); let sum = 0; loop obj in a { sum += obj; }; sum;", 30},
 		{"let a = array(5, 0, _ { args[1] + 2; }); let sum = 0; loop &obj in a { sum += &obj; &obj = sum; }; a[4];", 30},

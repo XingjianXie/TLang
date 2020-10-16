@@ -228,8 +228,6 @@ func (p *Parser) parseStatement() ast.Statement {
 	switch p.curToken.Type {
 	case token.Let:
 		return p.parseLetStatement()
-	case token.Ref:
-		return p.parseRefStatement()
 	case token.Ret:
 		return p.parseRetStatement()
 	case token.Out:
@@ -256,30 +254,6 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 		p.nextToken()
 		return stmt
 	}
-
-	if !p.expectPeek(token.Assign) {
-		return nil
-	}
-
-	p.nextToken()
-
-	stmt.Value = p.parseExpression(Lowest)
-
-	if !p.expectPeek(token.Semicolon) {
-		return nil
-	}
-
-	return stmt
-}
-
-func (p *Parser) parseRefStatement() *ast.RefStatement {
-	stmt := &ast.RefStatement{Token: p.curToken}
-
-	if !p.expectPeek(token.Ident) {
-		return nil
-	}
-
-	stmt.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
 
 	if !p.expectPeek(token.Assign) {
 		return nil

@@ -68,30 +68,6 @@ func (ls *LetStatement) String() string {
 	return out.String()
 }
 
-type RefStatement struct {
-	Token token.Token // the token.Ref token
-	Name  *Identifier
-	Value Expression
-}
-
-func (rs *RefStatement) statementNode()       {}
-func (rs *RefStatement) TokenLiteral() string { return rs.Token.Literal }
-func (rs *RefStatement) String() string {
-	var out bytes.Buffer
-
-	out.WriteString(rs.TokenLiteral() + " ")
-	out.WriteString(rs.Name.String())
-
-	if rs.Value != nil {
-		out.WriteString(" = ")
-		out.WriteString(rs.Value.String())
-	}
-
-	out.WriteString(";")
-
-	return out.String()
-}
-
 type AssignExpression struct {
 	Token    token.Token // the token.Let token
 	Left     Expression

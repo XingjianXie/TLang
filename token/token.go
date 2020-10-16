@@ -10,7 +10,6 @@ type Token struct {
 var keywords = map[string]Type{
 	"func":  Function,
 	"let":   Let,
-	"ref":   Ref,
 	"true":  True,
 	"false": False,
 	"void":  Void,
@@ -84,7 +83,6 @@ const (
 	// Keywords
 	Function  Type = "Function"
 	Let       Type = "Let"
-	Ref       Type = "Ref"
 	True      Type = "True"
 	False     Type = "False"
 	Void      Type = "Void"

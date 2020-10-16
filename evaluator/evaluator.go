@@ -789,11 +789,12 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		if isError(val) {
 			return val
 		}
+		if node.Name.Value[0] == '&' {
+			return evalRefStatement(node, env)
+		}
 		if _, ok := env.SetCurrent(node.Name.Value, val.Copy()); !ok {
 			return newError("identifier %s already set", node.Name.Value)
 		}
-	case *ast.RefStatement:
-		return evalRefStatement(node, env)
 	case *ast.DelStatement:
 		if ident, ok := node.DelIdent.(*ast.Identifier); ok {
 			if _, ok := env.Get(ident.Value); ok {
@@ -1260,7 +1261,7 @@ func evalBlockStatement(block *ast.BlockStatement, env *object.Environment) obje
 	return result
 }
 
-func evalRefStatement(node *ast.RefStatement, env *object.Environment) object.Object {
+func evalRefStatement(node *ast.LetStatement, env *object.Environment) object.Object {
 	left := Eval(node.Value, env)
 	if isError(left) {
 		return left

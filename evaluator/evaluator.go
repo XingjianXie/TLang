@@ -350,9 +350,9 @@ func init() {
 			return newError("native function append: arg should be Array")
 		}}),
 
-		"typeFull": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
+		"type&": makeObjectPointer(&object.Native{Fn: func(env *object.Environment, args []object.Object) object.Object {
 			if len(args) != 1 {
-				return newError("native function typeFull: len(args) should be 1")
+				return newError("native function type&: len(args) should be 1")
 			}
 			if refer, ok := args[0].(*object.Reference); ok {
 				isConst := ""

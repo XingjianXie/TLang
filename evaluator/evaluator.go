@@ -34,7 +34,7 @@ void * CStringPtr(void * ptr) {
     memcpy(str, ptr, strlen(ptr));
 	return str;
 }
- */
+*/
 import "C"
 
 func PrintParserErrors(out io.Writer, errors []string) {
@@ -69,7 +69,7 @@ func init() {
 						C.dlsym(unsafe.Pointer(uintptr(i.Value)), C.CString(string(str.Value))),
 					)), 10)
 					c := code(`
-						#.CFunction(` + s + `, "void");
+						#.CFunction(`+s+`, "void");
 					`, env)
 					return c
 				}
@@ -492,7 +492,7 @@ func init() {
 		}}),
 	})
 	SharedEnv.SetCurrent("#", code(`
-				 {
+				{
 					"array": func(n, v, ic) {
 						if (type ic == "Void") {
 							ret array(n, v);
@@ -500,21 +500,19 @@ func init() {
 						ret array(n, v - ic, func(i, v) { ret v + ic; });
 					},
 					"range": func(n, v, ic) {
-						let dv = v;
-						if (type dv == "Void") {
-							dv = 0;
+						if (type v == "Void") {
+							v = 0;
 						};
-						let dic = ic;
-						if (type dic == "Void") {
-							dic = 1;
+						if (type ic == "Void") {
+							ic = 1;
 						};
-						ret #Range(n, func(x) { ret dv + x * dic; });
+						ret #Range(n, func(x) { ret v + x * ic; });
 					},
 					"Range": {
 						"@class": "Range",
 						"@()": func(args, self) {
 							if (classType self == "Proto") {
-								ret { "@template": value(self), "@len": func() { ret args[0]; }, "relation": args[1] };
+								ret { "@template": self, "@len": func() { ret args[0]; }, "relation": args[1] };
 							};
 						},
 						"@[]": func(args, self) {
@@ -549,9 +547,9 @@ func init() {
 						"@()": func(args, self) {
 							if (classType self == "Proto") {
 								if (len args == 1) {
-									ret { "@template": value(self), "cType": typeC(args[0]), "raw": args[0] };
+									ret { "@template": self, "cType": typeC(args[0]), "raw": args[0] };
 								} else if (len args == 2) {
-									ret { "@template": value(self), "cType": value(args[1]), "raw": args[0] };
+									ret { "@template": self, "cType": args[1], "raw": args[0] };
 								};
 							};
 						}
@@ -560,20 +558,18 @@ func init() {
 						"@class": "CFunction",
 						"@()": func(args, self) {
 							if (classType self == "Proto") {
-								ret { "@template": value(self), "id": value(args[0]), "retType": value(args[1]) };
+								ret { "@template": self, "id": args[0], "retType": args[1] };
 							} else if (classType self == "Instance") {
 								let tps = [];
-								let ags = [];
-								loop v in args {
-									if (type v == "Hash") {
-										tps = append(tps, v.cType);
-										ags = append(ags, v.raw);
+								loop &v in args {
+									if (type &v == "Hash") {
+										tps = append(tps, &v.cType);
+										&v = &v.raw;
 									} else {
-										tps = append(tps, typeC v);
-										ags = append(ags, v);
+										tps = append(tps, typeC &v);
 									};
 								};
-								ret cdlCall(self.id, tps, ags, self.retType);
+								ret cdlCall(self.id, tps, args, self.retType);
 							};
 						}
 					},
@@ -591,7 +587,7 @@ func init() {
 							};
 							ret maximum;
 						} else {
-							ret #.max(args);
+							ret #max(args);
 						};
 					},
 				
@@ -609,23 +605,23 @@ func init() {
 							};
 							ret minimum;
 						} else {
-							ret #.min(args);
+							ret #min(args);
 						};
 					},
 				
 					"abs": _ {
-						if (len(args) != 1) {
+						if (len args != 1) {
 							ret void;
 						};
 						ret if (args[0] < 0) { -args[0]; } else { args[0]; };
 					},
 				
 					"sqrt": _ {
-						if (len(args) != 1) {
+						if (len args != 1) {
 							ret void;
 						};
 						let L = 0;
-						let R = #.max(1, args[0]);
+						let R = #max(1, args[0]);
 						ret integer((loop (R - L >= 1e-12) {
 							let M = (L + R) / 2;
 							let K = M * M;
@@ -642,11 +638,11 @@ func init() {
 				
 					"about": _ {
 						printLine();
-						printLine("TLang by mark07x");
-						printLine("T Language v0.1");
-						printLine("TLang Standard Library v0.1");
+						printLine "TLang by mark07x";
+						printLine "T Language v0.1";
+						printLine "TLang Standard Library v0.1";
 						printLine();
-						printLine("Hello World, Mark!");
+						printLine "Hello World, Mark!";
 						printLine();
 					}
 				};`, SharedEnv))
@@ -740,7 +736,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		args := evalExpressions(node.Arguments, env, false)
 		if len(args) == 1 && isError(args[0]) {
 			f, _ := SharedEnv.Get("fetch")
-			if function != *f {
+			if object.UnwrapReferenceValue(function) != *f {
 				return args[0]
 			}
 		}
@@ -827,6 +823,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 }
 
 type classFlag int
+
 const (
 	_ classFlag = iota
 	Default
@@ -1056,17 +1053,17 @@ func applyCdlCall(id int64, argsType []object.Object, argsValue []object.Object,
 		rt = &C.ffi_type_void
 	}
 	if C.ffi_prep_cif(cif, C.FFI_DEFAULT_ABI, C.uint(l),
-			rt, (**C.ffi_type)(argsTypeFFIRaw)) == C.FFI_OK {
+		rt, (**C.ffi_type)(argsTypeFFIRaw)) == C.FFI_OK {
 		C.ffi_call(cif, (*[0]byte)(unsafe.Pointer(uintptr(id))), rc, (*unsafe.Pointer)(argsValueFFIRaw))
 		switch retType {
 		case "long long":
 			return &object.Integer{Value: *(*int64)(rc)}
 		case "int":
-			return code("#.CType(" + strconv.Itoa(*(*int)(rc)) + ", \"int\");", env)
+			return code("#.CType("+strconv.Itoa(*(*int)(rc))+", \"int\");", env)
 		case "double":
 			return &object.Float{Value: *(*float64)(rc)}
 		case "pointer":
-			return code("#.CType(" + strconv.FormatInt(int64(uintptr(*(*unsafe.Pointer)(rc))), 10) + ", \"pointer\");", env)
+			return code("#.CType("+strconv.FormatInt(int64(uintptr(*(*unsafe.Pointer)(rc))), 10)+", \"pointer\");", env)
 		case "string":
 			return &object.String{Value: []rune(C.GoString(*(**C.char)(rc)))}
 		default:
@@ -1097,7 +1094,9 @@ func applyCall(fn object.Object, args []object.Object, env *object.Environment) 
 				argsRef = append(argsRef, &object.Reference{Value: &arr, Const: true})
 			}
 		}
-		inner.SetCurrent("args", &object.Array{Elements: argsRef, Copyable: false})
+		in := &object.Array{Elements: argsRef, Copyable: false}
+		inner.SetCurrent("&args", in)
+		inner.SetCurrent("args", object.UnwrapArrayReferenceValue(in))
 		evaluated := Eval(function.Body, inner)
 		return object.UnwrapRetValue(evaluated)
 	}
@@ -1124,22 +1123,34 @@ func extendFunctionEnv(
 
 	l := len(fn.Parameters)
 	if l != 0 {
-		if fn.Parameters[l - 1].Value == "self" || fn.Parameters[l - 1].Value == "selfChangeable" {
-			for len(args) < len(fn.Parameters) - 1{
+		if fn.Parameters[l-1].Value == "self" || fn.Parameters[l-1].Value == "&self" {
+			for len(args) < len(fn.Parameters)-1 {
 				args = append(args, object.VoidObj)
 			}
-			args = append(args, &object.Reference{Value: &fn.Self, Const: fn.Parameters[l - 1].Value == "self"})
+			if fn.Parameters[l-1].Value == "&self" {
+				args = append(args, &object.Reference{Value: &fn.Self, Const: false})
+			} else {
+				args = append(args, fn.Self)
+			}
 		}
 	}
 
 	for paramIdx, param := range fn.Parameters {
-		if paramIdx >= len(args) {
-			env.SetCurrent(param.Value, &object.Reference{Value: &object.VoidObj, Const: true})
-		} else {
-			if refer, ok := args[paramIdx].(*object.Reference); ok {
-				env.SetCurrent(param.Value, refer)
+		if param.Value[0] == '&' {
+			if paramIdx >= len(args) {
+				env.SetCurrent(param.Value, &object.Reference{Value: &object.VoidObj, Const: true})
 			} else {
-				env.SetCurrent(param.Value, &object.Reference{Value: &args[paramIdx], Const: true})
+				if refer, ok := args[paramIdx].(*object.Reference); ok {
+					env.SetCurrent(param.Value, refer)
+				} else {
+					env.SetCurrent(param.Value, &object.Reference{Value: &args[paramIdx], Const: true})
+				}
+			}
+		} else {
+			if paramIdx >= len(args) {
+				env.SetCurrent(param.Value, object.VoidObj)
+			} else {
+				env.SetCurrent(param.Value, object.UnwrapReferenceValue(args[paramIdx]))
 			}
 		}
 	}
@@ -1375,7 +1386,7 @@ func evalHashInfixExpression(
 		applyIndex(left, []object.Object{&object.String{Value: []rune("@" + operator)}}, Default, env),
 		[]object.Object{right, left},
 		env,
-		)
+	)
 }
 
 func evalBooleanInfixExpression(
@@ -1661,7 +1672,12 @@ func evalLoopInExpression(le *ast.LoopInExpression, env *object.Environment) obj
 			if isError(v) {
 				return v
 			}
-			newEnv.SetCurrent(le.Name.Value, v)
+			if le.Name.Value[0] == '&' {
+				newEnv.SetCurrent(le.Name.Value, v)
+			} else {
+				newEnv.SetCurrent(le.Name.Value, object.UnwrapReferenceValue(v))
+			}
+
 			newResult := Eval(le.Body, newEnv)
 			if isError(newResult) || newResult.Type() == object.RET {
 				return newResult

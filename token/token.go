@@ -36,67 +36,67 @@ func LookupIdent(ident string) Type {
 
 const (
 	Illegal Type = "Illegal"
-	Eof  Type   = "Eof"
+	Eof     Type = "Eof"
 
 	// Identifiers + literals
-	Ident   Type  = "Ident"     // add, foobar, x, y, ...
-	Number  Type  = "Number"    // 1343456
-	String  Type  = "String"    // "Hello World"
+	Ident     Type = "Ident"     // add, foobar, x, y, ...
+	Number    Type = "Number"    // 1343456
+	String    Type = "String"    // "Hello World"
 	Character Type = "Character" // '1'
 
 	// Operators
-	Assign  Type   = "="
-	Plus    Type   = "+"
-	Minus   Type   = "-"
-	Asterisk Type  = "*"
-	Slash   Type   = "/"
+	Assign     Type = "="
+	Plus       Type = "+"
+	Minus      Type = "-"
+	Asterisk   Type = "*"
+	Slash      Type = "/"
 	Percentage Type = "%"
-	Bang   Type    = "!"
-	Dot    Type    = "."
+	Bang       Type = "!"
+	Dot        Type = "."
 
 	Lt Type = "<"
 	Gt Type = ">"
 
-	Eq Type   = "=="
+	Eq    Type = "=="
 	NotEq Type = "!="
 
-	PlusEq    Type   = "+="
-	MinusEq   Type   = "-="
-	AsteriskEq Type  = "*="
-	SlashEq    Type  = "/="
+	PlusEq       Type = "+="
+	MinusEq      Type = "-="
+	AsteriskEq   Type = "*="
+	SlashEq      Type = "/="
 	PercentageEq Type = "%="
 
 	LtEq Type = "<="
 	GtEq Type = ">="
 
 	// Delimiters
-	Comma  Type   = ","
+	Comma     Type = ","
 	Semicolon Type = ";"
-	Colon Type    = ":"
+	Colon     Type = ":"
 
-	Lparen Type  = "("
-	Rparen Type  = ")"
-	Lbrace  Type = "{"
-	Rbrace  Type = "}"
+	Lparen   Type = "("
+	Rparen   Type = ")"
+	Lbrace   Type = "{"
+	Rbrace   Type = "}"
 	Lbracket Type = "["
 	Rbracket Type = "]"
 
 	// Keywords
-	Function Type  = "Function"
-	Let  Type     = "Let"
-	Ref   Type    = "Ref"
-	True   Type   = "True"
-	False  Type   = "False"
-	Void   Type   = "Void"
-	If     Type   = "If"
-	Else  Type    = "Else"
-	Loop   Type   = "Loop"
-	Out    Type   = "Out"
-	Jump   Type   = "Jump"
-	Ret    Type   = "Ret"
+	Function  Type = "Function"
+	Let       Type = "Let"
+	Ref       Type = "Ref"
+	True      Type = "True"
+	False     Type = "False"
+	Void      Type = "Void"
+	If        Type = "If"
+	Else      Type = "Else"
+	Loop      Type = "Loop"
+	Out       Type = "Out"
+	Jump      Type = "Jump"
+	Ret       Type = "Ret"
 	Underline Type = "Underline"
-	In    Type    = "In"
-	And   Type    = "And"
-	Or    Type    = "Or"
-	Del    Type   = "Del"
+	In        Type = "In"
+	And       Type = "And"
+	Or        Type = "Or"
+	Del       Type = "Del"
 )

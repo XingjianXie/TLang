@@ -575,21 +575,21 @@ func TestReference(t *testing.T) {
 
 		{"let a = [1,2,3,4,[1,2,3]]; ref b = a[4]; b[0] = 2; a[4][0];", 2},
 
-		{"let x = 3; _{ args[0] = 4; }(x); x;", 4},
+		{"let x = 3; _{ &args[0] = 4; }(x); x;", 4},
 		{"let x = 3; _{ args[0] + args[1] + args[2]; }(x, x, 5);", 11},
-		{"let x = 0; func(a) { a = 3; } (x); x;", 3},
-		{"let x = 0; func(a, b) { a = 3 + b; } (x, 5); x;", 8},
+		{"let x = 0; func(&a) { &a = 3; } (x); x;", 3},
+		{"let x = 0; func(&a, &b) { &a = 3 + &b; } (x, 5); x;", 8},
 
 		{"let x = 0; func() { x = 4; }(); x;", 4},
 		{"let x = 0; ref y = x; func() { y = 4; }(); integer(y == x and x == 4);", 1},
-		{"let a = 0; ref b = a; func(t) { t = 5; }(a); b;", 5},
+		{"let a = 0; ref b = a; func(&t) { &t = 5; }(a); b;", 5},
 
 		{"let a = { 1:2, 3:4, 5:6 }; a[1] = 4; a[1];", 4},
 		{"let a = { 1:2, 3:4, 5: 6}; ref b = a[1]; b = 4; a[1];", 4},
 		{"let a = { 1:2, \"1\":3 }; integer(a[1] == 2 and a[string(1)] == 3);", 1},
 		{"let a = { \"f\": func(self){ret self.q;}, \"q\": 2 }; a.f();", 2},
-		{"integer(type(value({func(self){ret self;}())) == \"Void\");", 1},
-		{"let a = {\"b\": 2}; a.a = a; a.a.b;",2},
+		{"integer(type({func(self){ret self;}()) == \"Void\");", 1},
+		{"let a = {\"b\": 2}; a.a = a; a.a.b;", 2},
 	}
 
 	for _, tt := range tests {
@@ -618,9 +618,9 @@ func TestHashLiterals(t *testing.T) {
 		(&object.String{Value: []rune("one")}).HashKey():   1,
 		(&object.String{Value: []rune("two")}).HashKey():   2,
 		(&object.String{Value: []rune("three")}).HashKey(): 8,
-		(&object.Integer{Value: 4}).HashKey():      4,
-		object.TrueObj.(*object.Boolean).HashKey():           5,
-		object.FalseObj.(*object.Boolean).HashKey():          6,
+		(&object.Integer{Value: 4}).HashKey():              4,
+		object.TrueObj.(*object.Boolean).HashKey():         5,
+		object.FalseObj.(*object.Boolean).HashKey():        6,
 	}
 
 	if len(result.Pairs) != len(expected) {
@@ -757,6 +757,7 @@ func TestLoopInExpression(t *testing.T) {
 		{"let a = [5, 2, 5]; ref b = a; let sum = 0; loop obj in b { sum += obj; }; sum;", 12},
 		{"let a = array(5, 0, _ { args[1] + 1; }); let sum = 0; loop obj in a { sum += obj; }; sum;", 15},
 		{"let a = array(5, 0, _ { args[1] + 2; }); let sum = 0; loop obj in a { sum += obj; }; sum;", 30},
+		{"let a = array(5, 0, _ { args[1] + 2; }); let sum = 0; loop &obj in a { sum += &obj; &obj = sum; }; a[4];", 30},
 	}
 
 	for _, tt := range tests {

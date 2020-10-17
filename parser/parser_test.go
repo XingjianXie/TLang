@@ -673,7 +673,7 @@ func TestLoopExpression(t *testing.T) {
 }
 
 func TestLoopInExpression(t *testing.T) {
-	input := `loop a in [1, 2, 3] { void; };`
+	input := `loop a in ([1, 2, 3]) { void; };`
 
 	l := lexer.New(input)
 	p := New(l)

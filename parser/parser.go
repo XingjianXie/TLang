@@ -40,6 +40,7 @@ var precedences = map[token.Type]int{
 	token.String:       Call,
 	token.Character:    Call,
 	token.Lparen:       Call,
+	token.Lbrace:       Call,
 	token.True:         Call,
 	token.False:        Call,
 	token.Void:         Call,
@@ -185,13 +186,14 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(token.Assign, p.parseInfixExpression)
 
 	p.registerInfix(token.Lparen, p.parseCallExpression)
-	p.registerInfix(token.Ident, p.parseCallSpecialExpression)
-	p.registerInfix(token.Number, p.parseCallSpecialExpression)
-	p.registerInfix(token.String, p.parseCallSpecialExpression)
-	p.registerInfix(token.Character, p.parseCallSpecialExpression)
-	p.registerInfix(token.True, p.parseCallSpecialExpression)
-	p.registerInfix(token.False, p.parseCallSpecialExpression)
-	p.registerInfix(token.Void, p.parseCallSpecialExpression)
+	p.registerInfix(token.Ident, p.parseSimpleCallExpression)
+	p.registerInfix(token.Number, p.parseSimpleCallExpression)
+	p.registerInfix(token.String, p.parseSimpleCallExpression)
+	p.registerInfix(token.Character, p.parseSimpleCallExpression)
+	p.registerInfix(token.True, p.parseSimpleCallExpression)
+	p.registerInfix(token.False, p.parseSimpleCallExpression)
+	p.registerInfix(token.Void, p.parseSimpleCallExpression)
+	p.registerInfix(token.Lbrace, p.parseSimpleCallExpressionUnderline)
 
 	p.registerInfix(token.Dot, p.parseDotExpression)
 	p.registerInfix(token.Lbracket, p.parseIndexExpression)
@@ -564,8 +566,14 @@ func (p *Parser) parseLoopExpression() ast.Expression {
 		if !p.expectPeek(token.In) {
 			return nil
 		}
+		if !p.expectPeek(token.Lparen) {
+			return nil
+		}
 		p.nextToken()
 		expression.Range = p.parseExpression(Lowest)
+		if !p.expectPeek(token.Rparen) {
+			return nil
+		}
 
 		if !p.expectPeek(token.Lbrace) {
 			return nil
@@ -677,10 +685,18 @@ func (p *Parser) parseCallExpression(function ast.Expression) ast.Expression {
 	return exp
 }
 
-func (p *Parser) parseCallSpecialExpression(function ast.Expression) ast.Expression {
+func (p *Parser) parseSimpleCallExpression(function ast.Expression) ast.Expression {
 	exp := &ast.CallExpression{Token: p.curToken, Function: function}
 	prefix := p.prefixParseFns[p.curToken.Type]
 	exp.Arguments = []ast.Expression{prefix()}
+	return exp
+}
+
+func (p *Parser) parseSimpleCallExpressionUnderline(function ast.Expression) ast.Expression {
+	exp := &ast.CallExpression{Token: p.curToken, Function: function}
+	lit := &ast.UnderLineLiteral{Token: p.curToken}
+	lit.Body = p.parseBlockStatement()
+	exp.Arguments = []ast.Expression{lit}
 	return exp
 }
 

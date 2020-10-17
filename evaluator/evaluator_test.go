@@ -752,11 +752,11 @@ func TestLoopInExpression(t *testing.T) {
 		input    string
 		expected int64
 	}{
-		{"let a = [5, 2, 3]; let sum = 0; loop obj in a { sum += obj; }; sum;", 10},
-		{"let a = [5, 2, 5]; let &b = a; let sum = 0; loop obj in &b { sum += obj; }; sum;", 12},
-		{"let a = array(5, 0, _ { args[1] + 1; }); let sum = 0; loop obj in a { sum += obj; }; sum;", 15},
-		{"let a = array(5, 0, _ { args[1] + 2; }); let sum = 0; loop obj in a { sum += obj; }; sum;", 30},
-		{"let a = array(5, 0, _ { args[1] + 2; }); let sum = 0; loop &obj in a { sum += &obj; &obj = sum; }; a[4];", 30},
+		{"let a = [5, 2, 3]; let sum = 0; loop obj in (a) { sum += obj; }; sum;", 10},
+		{"let a = [5, 2, 5]; let &b = a; let sum = 0; loop obj in (&b) { sum += obj; }; sum;", 12},
+		{"let a = array(5, 0, _ { args[1] + 1; }); let sum = 0; loop obj in (a) { sum += obj; }; sum;", 15},
+		{"let a = array(5, 0, _ { args[1] + 2; }); let sum = 0; loop obj in (a) { sum += obj; }; sum;", 30},
+		{"let a = array(5, 0, _ { args[1] + 2; }); let sum = 0; loop &obj in (a) { sum += &obj; &obj = sum; }; a[4];", 30},
 	}
 
 	for _, tt := range tests {

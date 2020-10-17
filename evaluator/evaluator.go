@@ -499,6 +499,19 @@ func init() {
 	})
 	SharedEnv.SetCurrent("#", code(`
 				{
+					"switch": func(v) {
+						let rv = {
+							"case": func(c) {
+								ret func(f) {
+									if (v == c) {
+										f();
+									};
+									ret rv;
+								};
+							}
+						};
+						ret rv;
+					},
 					"f": func(str) {
 						ret {
 							"@()": func(args) {
@@ -615,7 +628,7 @@ func init() {
 								ret { "@template": self, "id": args[0], "retType": args[1] };
 							} else if (classType self == "Instance") {
 								let tps = [];
-								loop &v in args {
+								loop &v in (args) {
 									if (type &v == "Hash") {
 										tps = append(tps, &v.cType);
 										&v = &v.raw;
@@ -636,7 +649,7 @@ func init() {
 								ret void;
 							};
 							let maximum = args[0][0];
-							loop x in args[0] {
+							loop x in (args[0]) {
 								maximum = if (x > maximum) { x; } else { maximum; };
 							};
 							ret maximum;
@@ -654,7 +667,7 @@ func init() {
 								ret void;
 							};
 							let minimum = args[0][0];
-							loop x in args[0] {
+							loop x in (args[0]) {
 								minimum = if (x < minimum) { x; } else { minimum; };
 							};
 							ret minimum;

@@ -253,11 +253,11 @@ type UnderLine struct {
 
 func (u *UnderLine) Inspect(num int, env *Environment) string {
 	if num <= 1 {
-		return "_ {...}"
+		return "_{...}"
 	}
 	var out bytes.Buffer
 
-	out.WriteString("_ ")
+	out.WriteString("_")
 	out.WriteString(u.Body.String())
 
 	return out.String()

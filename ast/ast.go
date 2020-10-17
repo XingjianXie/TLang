@@ -382,8 +382,7 @@ func (ul *UnderLineLiteral) TokenLiteral() string { return ul.Token.Literal }
 func (ul *UnderLineLiteral) String() string {
 	var out bytes.Buffer
 
-	out.WriteString(ul.TokenLiteral())
-	out.WriteString(" ")
+	out.WriteString("_")
 	out.WriteString(ul.Body.String())
 
 	return out.String()

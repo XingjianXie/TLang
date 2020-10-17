@@ -83,7 +83,8 @@ f {
 };
 ```
 Those types are allowed
-*Important: When {} is used after a function, it means underline function, instead of hash*
+
+**Important: When {} is used after a function, it means underline function, instead of hash**
 ```
 let a = { "x": [1, 2, 3] };
 f a;
@@ -118,6 +119,7 @@ This does not work
 #### Array
 ##### array(len, first, nextFunc)
 nextFunc is defined as func(index, previousValue) { ret nextValue; }
+
 array call nextFunc at each time to generate the next element, for the first call, previousValue = first
 - `array 5;` to get \[void, void, void, void, void]
 - `array(5, 0);` to get \[0, 0, 0, 0, 0]
@@ -137,6 +139,7 @@ array call nextFunc at each time to generate the next element, for the first cal
 
 ### Special Usage of Hash
 Hash is a special type with abilities to simulate array or function.
+
 A Hash can also be defined as class, or a class instance.
 
 #### Use key from another Hash

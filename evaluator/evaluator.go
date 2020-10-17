@@ -49,6 +49,16 @@ func makeObjectPointer(obj Object) *Object {
 
 func init() {
 	SharedEnv = NewEnvironment(&map[string]*Object{
+		"natives": makeObjectPointer(&Native{Fn: func(env *Environment, args []Object) Object {
+			for env.outer != nil {
+				env = env.outer
+			}
+			l := &Array{Elements: []Object{}, Xvalue: true}
+			for k := range *env.store {
+				l.Elements = append(l.Elements, &String{Value: []rune(k)})
+			}
+			return l
+		}}),
 		"cdlOpen": makeObjectPointer(&Native{Fn: func(env *Environment, args []Object) Object {
 			if len(args) != 1 {
 				return newError("native function cdlOpen: len(args) should be 1")

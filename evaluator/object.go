@@ -64,7 +64,7 @@ func UnwrapOutValue(obj Object) Object {
 
 func UnwrapArrayReferenceValue(obj Object) Object {
 	if arr, ok := obj.(*Array); ok {
-		arr1 := &Array{Elements: []Object{}, Copyable: true}
+		arr1 := &Array{Elements: []Object{}, Xvalue: true}
 		for _, e := range arr.Elements {
 			arr1.Elements = append(arr1.Elements, UnwrapReferenceValue(e))
 		}
@@ -115,8 +115,8 @@ type HashAble interface {
 
 type Allocable interface {
 	Object
-	DoAlloc(Index Object) (*Object, bool)
-	DeAlloc(Index Object) bool
+	Alloc(Index Object) (*Object, bool)
+	Free(Index Object) bool
 }
 
 type HashKey struct {
@@ -305,7 +305,7 @@ func (n *Native) FunctorObj()            {}
 
 type Array struct {
 	Elements []Object
-	Copyable bool
+	Xvalue   bool
 }
 
 func (a *Array) Inspect(num int, env *Environment) string {
@@ -328,8 +328,8 @@ func (a *Array) Inspect(num int, env *Environment) string {
 func (a *Array) Type() Type   { return ARRAY }
 func (a *Array) TypeC() TypeC { return POINTER }
 func (a *Array) Copy() Object {
-	if a.Copyable {
-		a.Copyable = false
+	if a.Xvalue {
+		a.Xvalue = false
 		return a
 	}
 	var elements []Object
@@ -373,12 +373,12 @@ type HashPair struct {
 }
 
 type Hash struct {
-	Pairs    map[HashKey]HashPair
-	Copyable bool
+	Pairs  map[HashKey]HashPair
+	Xvalue bool
 }
 
 func (h *Hash) FunctorObj() {}
-func (h *Hash) DoAlloc(Index Object) (*Object, bool) {
+func (h *Hash) Alloc(Index Object) (*Object, bool) {
 	if hashIndex, ok := Index.(HashAble); ok {
 		key := hashIndex.HashKey()
 		if _, ok := h.Pairs[key]; !ok {
@@ -392,7 +392,7 @@ func (h *Hash) DoAlloc(Index Object) (*Object, bool) {
 	}
 	return nil, false
 }
-func (h *Hash) DeAlloc(Index Object) bool {
+func (h *Hash) Free(Index Object) bool {
 	if hashIndex, ok := Index.(HashAble); ok {
 		key := hashIndex.HashKey()
 		if _, ok := h.Pairs[key]; ok {
@@ -429,8 +429,8 @@ func (h *Hash) Inspect(num int, env *Environment) string {
 func (h *Hash) Type() Type   { return HASH }
 func (h *Hash) TypeC() TypeC { return INVALID }
 func (h *Hash) Copy() Object {
-	if h.Copyable {
-		h.Copyable = false
+	if h.Xvalue {
+		h.Xvalue = false
 		return h
 	}
 	pairs := make(map[HashKey]HashPair)
@@ -443,7 +443,7 @@ func (h *Hash) Copy() Object {
 	}
 
 	return &Hash{
-		Pairs:    pairs,
-		Copyable: false,
+		Pairs:  pairs,
+		Xvalue: false,
 	}
 }

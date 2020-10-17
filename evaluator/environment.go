@@ -29,7 +29,7 @@ func (e *Environment) Get(name string) (*Object, bool) {
 	return obj, ok
 }
 
-func (e *Environment) DoAlloc(Index Object) (*Object, bool) {
+func (e *Environment) Alloc(Index Object) (*Object, bool) {
 	if envIndex, ok := Index.(*String); ok {
 		if _, ok := (*e.store)[string(envIndex.Value)]; ok {
 			return nil, false
@@ -42,14 +42,14 @@ func (e *Environment) DoAlloc(Index Object) (*Object, bool) {
 }
 
 func (e *Environment) SetCurrent(name string, val Object) (*Object, bool) {
-	if ptr, ok := e.DoAlloc(&String{Value: []rune(name)}); ok {
+	if ptr, ok := e.Alloc(&String{Value: []rune(name)}); ok {
 		*ptr = val
 		return ptr, true
 	}
 	return nil, false
 }
 
-func (e *Environment) DeAlloc(Index Object) bool {
+func (e *Environment) Free(Index Object) bool {
 	if envIndex, ok := Index.(*String); ok {
 		_, ok := (*e.store)[string(envIndex.Value)]
 		if ok {
@@ -57,7 +57,7 @@ func (e *Environment) DeAlloc(Index Object) bool {
 			return true
 		}
 		if !ok && e.outer != nil {
-			return e.outer.DeAlloc(envIndex)
+			return e.outer.Free(envIndex)
 		}
 	}
 	return false

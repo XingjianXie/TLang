@@ -184,6 +184,13 @@ func init() {
 			un := UnwrapReferenceValue(args[0])
 			return toString(un, env)
 		}}),
+		"inspect": makeObjectPointer(&Native{Fn: func(env *Environment, args []Object) Object {
+			if len(args) != 1 {
+				return newError("native function inspect: len(args) should be 1")
+			}
+			un := UnwrapReferenceValue(args[0])
+			return &String{Value: []rune(un.Inspect(16, env))}
+		}}),
 		"exit": makeObjectPointer(&Native{Fn: func(env *Environment, args []Object) Object {
 			if len(args) != 1 && len(args) != 0 {
 				return newError("native function exit: len(args) should be 1 or 0")
@@ -308,7 +315,7 @@ func init() {
 				return newError("native function append: len(args) should be 2")
 			}
 			if array, ok := UnwrapReferenceValue(args[0]).(*Array); ok {
-				return &Array{Elements: append(array.Elements, UnwrapReferenceValue(args[1])), Copyable: true}
+				return &Array{Elements: append(array.Elements, UnwrapReferenceValue(args[1])), Xvalue: true}
 			}
 			return newError("native function append: args[0] should be Array")
 		}}),
@@ -391,7 +398,7 @@ func init() {
 
 					return &Array{
 						Elements: elem,
-						Copyable: true,
+						Xvalue:   true,
 					}
 				}
 				return newError("native function array: args[0] should be Integer")
@@ -404,7 +411,7 @@ func init() {
 
 					return &Array{
 						Elements: elem,
-						Copyable: true,
+						Xvalue:   true,
 					}
 				}
 				return newError("native function array: args[0] should be Integer")
@@ -423,7 +430,7 @@ func init() {
 
 						return &Array{
 							Elements: elem,
-							Copyable: true,
+							Xvalue:   true,
 						}
 					}
 					return newError("native function array: args[2] should be Functor")
@@ -499,30 +506,34 @@ func init() {
 								let i = 0;
 								let agi = 0;
 								loop (i < len(str)) {
-									if (str[i] != '{') {
-										s += str[i];
-										i += 1;
+									let now = str[i];
+									let nxt = if (i + 1 < len(str)) {
+										str[i + 1];
 									} else {
-										if (str[i + 1] == '}') {
+										' ';
+									};
+									if (now == '$') {
+										if (nxt == '.') {
 											s += string(args[agi]);
 											agi += 1;
-										} else if (str[i + 1] == '{') {
-											s += "{";
+										} else if (nxt == '*') {
+											s += inspect(args[agi]);
+											agi += 1;
+										} else if (nxt == '$') {
+											s += "$";
 										} else {
-											s += str[i];
-											i += 1;
-											jump;
+											error "bad format";
 										};
 										i += 2;
+									} else {
+										s += str[i];
+										i += 1;
 									};
 								};
 								ret s;
 							},
 							"@inspect": func(self) {
-								ret #f"#f\"{}\""(str);
-							},
-							"@string": func(self) {
-								ret self.@inspect();
+								ret #f"#f\"$.\""(str);
 							}
 						};
 					},
@@ -539,7 +550,7 @@ func init() {
 						if (type ic == "Void") {
 							ic = 1;
 						};
-						ret #Range(n, eval(#f"func(x) { ret {} + x * {}; };"(v, ic)));
+						ret #Range(n, eval(#f"func(x) { ret $. + x * $.; };"(v, ic)));
 					},
 					"Range": {
 						"@class": "Range",
@@ -557,11 +568,8 @@ func init() {
 							if (classType self == "Proto") {
 								ret "Range Creator(len, relation)";
 							} else if (classType self == "Instance") {
-								ret #f"Range(len: {}, relation: {}"(self.@len(), self.relation);
+								ret #f"Range(len: $., relation: $."(self.@len(), self.relation);
 							};
-						},
-						"@string": func(self) {
-							ret self.@inspect();
 						}
 					},
 					"commonRetType": {
@@ -579,9 +587,6 @@ func init() {
 						"@[]": _ { ret "void"; },
 						"@inspect": func(self) {
 							ret "commonRetType";
-						},
-						"@string": func(self) {
-							ret self.@inspect();
 						}
 					},
 					"C": {
@@ -747,7 +752,7 @@ func Eval(node ast.Node, env *Environment) Object {
 		if len(elements) == 1 && isError(elements[0]) {
 			return elements[0]
 		}
-		return &Array{Elements: elements, Copyable: false}
+		return &Array{Elements: elements, Xvalue: false}
 	case *ast.HashLiteral:
 		return evalHashLiteral(node, env)
 
@@ -847,7 +852,7 @@ func Eval(node ast.Node, env *Environment) Object {
 	case *ast.DelStatement:
 		if ident, ok := node.DelIdent.(*ast.Identifier); ok {
 			if _, ok := env.Get(ident.Value); ok {
-				if !env.DeAlloc(&String{Value: []rune(ident.Value)}) {
+				if !env.Free(&String{Value: []rune(ident.Value)}) {
 					return newError("unable to dealloc: %s", node.DelIdent.String())
 				}
 			} else {
@@ -859,7 +864,7 @@ func Eval(node ast.Node, env *Environment) Object {
 					return newError("delete a constant reference: %s", refer.Inspect(16, env))
 				}
 				if refer.Origin != nil {
-					if !refer.Origin.DeAlloc(refer.Index) {
+					if !refer.Origin.Free(refer.Index) {
 						return newError("unable to dealloc: %s", refer.Inspect(16, env))
 					}
 					return VoidObj
@@ -1144,7 +1149,7 @@ func applyCall(fn Object, args []Object, env *Environment) Object {
 				argsRef = append(argsRef, &Reference{Value: &arr, Const: true})
 			}
 		}
-		in := &Array{Elements: argsRef, Copyable: false}
+		in := &Array{Elements: argsRef, Xvalue: false}
 		inner.SetCurrent("&args", in)
 		inner.SetCurrent("args", UnwrapArrayReferenceValue(in))
 		evaluated := Eval(function.Body, inner)
@@ -1380,7 +1385,7 @@ func evalAssignExpression(node *ast.AssignExpression, env *Environment) Object {
 			if refer.Origin == nil {
 				return newError("assign to empty reference with no alloc function")
 			}
-			if refer.Value, ok = refer.Origin.DoAlloc(refer.Index); !ok {
+			if refer.Value, ok = refer.Origin.Alloc(refer.Index); !ok {
 				return newError("assign to empty reference with alloc function failed")
 			}
 		}

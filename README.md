@@ -28,28 +28,35 @@ This is a programming language based on "Monkey" in the book *Writing An Interpr
 - `let a = { "hello": "world" }; a.hello;` to access string "world"
 - `let a = { "hello": "world" }; a.hello = "mark";` to modify a.hello to "mark"
 - `let a = {}; a.hello = "mark";` to add new key "hello" with value "mark"
-#### Define Function Variable
-- `let f = func(a, b) { ret a + b; };` to define variable f with a function
-- `let f = func(a, b) { ret a + b; }; f(1, 2);` to call func with arguments 1 and 2, get 3
-- `let f = func(a, b) { ret a + b; }; f("hello", " world");` to call func with arguments "hello" and " world", get "hello world"
-- `let u = _ { ret args[0] + args[1]; };` to define variable f with an underline function
-- `let u = _ { ret args[0] + args[1]; }; u(1, 2);` to call underline with arguments 1 and 2, get 3
 #### Define Reference
 - `let a = 1; let &b = a;` to define reference &b to a
 - `let a = [123, 456]; ref &b = a[0];` to define reference &b to a\[0]
 - `let a = { "hello": "world" }; ref &b = a.hello;` to define reference &b to a.hello
 - `lef &b = 1;` to define const reference &c to number 1 (this can be used as constant)
+#### Define Function Variable
+- `let f = func(a, b) { ret a + b; };` to define variable f with a function
+- `let f = func(a, b) { ret a + b; }; f(1, 2);` to call func with arguments 1 and 2, get 3
+- `let f = func(a, b) { ret a + b; }; f("hello", " world");` to call func with arguments "hello" and " world", get "hello world"
+- `let f = func(&a) { &a += 1; }; let x = 1; f(x); x;` to pass reference and change the value of it
+- `let u = _ { ret args[0] + args[1]; };` to define variable f with an underline function
+- `let u = _ { ret args[0] + args[1]; }; u(1, 2);` to call underline with arguments 1 and 2, get 3
+- `let u = _ { &args[0] += 1; }; let x = 1; u(x); x;` to access reference and change the value of it
 #### Delete Variable / Reference
 - `let a = 1; del a;` to delete varibale a
 - `let a = 1; let &b = a; del &b;` to delete reference b
 - `let a = 1; let &b = a; del (&b);` to delete b's origin (a)
-#### Conditional Statement
-- `if (condition) { ... };` to run code conditionally (the period could not be ignored)
+#### Conditional Expression(Statement)
+- `if (condition) { ... };` to run code conditionally
 - `if (condition) { ... } else { ... };` if with else
 - `if (condition) { ... } else if (another condition) { ... } else {...};` full form of if
-#### Loop Statement
+- `let r = if (condition) { ...; value1; } else { ...; value2; };` to use if as expression
+#### Loop Expression(Statement)
 - `loop (condition) { ... };` loop until the condition is false
 - `loop v in (array) { ... };` loop in array
+- `jump;` start a new cycle
+- `out;` exit loop
+- `out 1;` exit loop with a out value integer 1
+- `let r = loop (condition) { ...; out value; ...; }` to use loop as expression, get out value
 #### Import / Export
 - `let export = ...` to export variable
 
@@ -204,3 +211,87 @@ a.fn = func(&self) {
 printLine(a.xx);
 ````
 This will print "Hello, Mark"
+#### Class Type
+A hash with "@class" key is a Proto
+```
+let Mark = {"@class": "Mark"}
+printLine(classType Mark);
+```
+This will print "Proto"
+
+
+A hash with "@template" key and no "@class" key is an Instance
+```
+let mark = {"@template": Mark}
+printLine(classType mark);
+```
+This will print "Instance"
+
+
+A hash with both "@template" key and "@class" key is an Proto (Sub-class)
+```
+let markChild = {"@template": Mark, "@class": "MarkChild"}
+printLine(classType markChild);
+```
+This will print "Proto"
+#### Class Initializer
+Standard way to define a class with initializer
+```
+let People = {
+    "@class": "People",
+    "@()": func(args, self) {
+        if (classType self == "Proto") {
+            ret {
+                "@template": self,
+                "name": args[0],
+                "age": args[1],
+            }
+        }
+    },
+    "greet": func(self) {
+        if (classType self == "Instance") {
+            printLine("Hi, I am " + self.name)
+            printLine("I am " + string(self.age))
+        }
+    },
+}
+let mark = People("Mark", 17)
+mark.greet()
+```
+Output:
+```
+Hi, I am Mark
+I am 17
+```
+Use @() and classType self == "Proto" to initialize class
+
+
+```
+let Student = {
+    "@class": "Student",
+    "@template": People,
+    "@()": func(args, self) {
+        if (classType self == "Proto") {
+            let s = super(self, "@()")(args)
+            s.school = args[2]
+            ret s
+        }
+    },
+    "greet": func(self) {
+        if (classType self == "Instance") {
+            super(self, "greet")()
+            printLine("I am from " + self.school)
+        }
+    },
+}
+let zia = Student("Zia", 16, "CNUHS")
+zia.greet()
+```
+Output:
+```
+Hi, I am Zia
+I am 16
+I am from CNUHS
+```
+Use super(self, name) to access the key on super class
+

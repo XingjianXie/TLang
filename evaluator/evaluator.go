@@ -511,12 +511,22 @@ func init() {
 				{
 					"switch": func(v) {
 						let rv = {
-							"case": func(c) {
+							"case": _{
 								ret func(f) {
-									if (v == c) {
-										f()
+									loop arg in (args) {
+										if (v == args[0]) {
+											f()
+											rv.done = true
+											out
+										}
 									}
 									ret rv
+								}
+							},
+							"done": false,
+							"default": func(f, self){
+								if (!self.done) {
+									f()
 								}
 							},
 						}

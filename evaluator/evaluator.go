@@ -514,89 +514,89 @@ func init() {
 							"case": func(c) {
 								ret func(f) {
 									if (v == c) {
-										f();
-									};
-									ret rv;
-								};
-							}
-						};
-						ret rv;
+										f()
+									}
+									ret rv
+								}
+							},
+						}
+						ret rv
 					},
 					"printf": func(str, fmt) {
-						print(#f(str)(fmt));
+						print(#f(str)(fmt))
 					},
 					"f": func(str) {
 						ret {
 							"@()": func(args) {
-								let s = "";
-								let i = 0;
-								let agi = 0;
+								let s = ""
+								let i = 0
+								let agi = 0
 								loop (i < len(str)) {
-									let now = str[i];
+									let now = str[i]
 									let nxt = if (i + 1 < len(str)) {
-										str[i + 1];
+										str[i + 1]
 									} else {
-										' ';
-									};
+										' '
+									}
 									if (now == '$') {
 										if (nxt == '.') {
-											s += string(args[agi]);
-											agi += 1;
+											s += string(args[agi])
+											agi += 1
 										} else if (nxt == '*') {
-											s += inspect(args[agi]);
-											agi += 1;
+											s += inspect(args[agi])
+											agi += 1
 										} else if (nxt == '$') {
-											s += "$";
+											s += "$"
 										} else {
-											error "bad format";
+											error "bad format"
 										};
-										i += 2;
+										i += 2
 									} else {
-										s += str[i];
-										i += 1;
-									};
+										s += str[i]
+										i += 1
+									}
 								};
-								ret s;
+								ret s
 							},
 							"@inspect": func(self) {
-								ret #f"#f\"$.\""(str);
-							}
+								ret #f"#f\"$.\""(str)
+							},
 						};
 					},
 					"array": func(n, v, ic) {
 						if (type ic == "Void") {
-							ret array(n, v);
+							ret array(n, v)
 						};
-						ret array(n, v - ic, func(i, v) { ret v + ic; });
+						ret array(n, v - ic, func(i, v) { ret v + ic; })
 					},
 					"range": func(n, v, ic) {
 						if (type v == "Void") {
-							v = 0;
+							v = 0
 						};
 						if (type ic == "Void") {
-							ic = 1;
+							ic = 1
 						};
-						ret #Range(n, eval(#f"func(x) { ret $. + x * $.; };"(v, ic)));
+						ret #Range(n, eval(#f"func(x) { ret $. + x * $.; };"(v, ic)))
 					},
 					"Range": {
 						"@class": "Range",
 						"@()": func(args, self) {
 							if (classType self == "Proto") {
-								ret { "@template": self, "@len": func() { ret args[0]; }, "relation": args[1] };
+								ret { "@template": self, "@len": func() { ret args[0]; }, "relation": args[1] }
 							};
 						},
 						"@[]": func(args, self) {
 							if (classType self == "Instance") {
-								ret self.relation(args[0]);
+								ret self.relation(args[0])
 							};
 						},
 						"@inspect": func(self) {
 							if (classType self == "Proto") {
-								ret "Range Creator(len, relation)";
+								ret "Range Creator(len, relation)"
 							} else if (classType self == "Instance") {
-								ret #f"Range(len: $., relation: $."(self.@len(), self.relation);
+								ret #f"Range(len: $., relation: $."(self.@len(), self.relation)
 							};
-						}
+						},
 					},
 					"commonRetType": {
 						"TStringObj": "string",
@@ -612,119 +612,119 @@ func init() {
 						"sqrt": "double",
 						"@[]": _ { ret "void"; },
 						"@inspect": func(self) {
-							ret "commonRetType";
-						}
+							ret "commonRetType"
+						},
 					},
 					"C": {
 						"@[]": func(args) {
-							let f = cdlSym(-2, args[0]);
-							f.retType = #commonRetType[args[0]];
-							ret f;
-						}
+							let f = cdlSym(-2, args[0])
+							f.retType = #commonRetType[args[0]]
+							ret f
+						},
 					},
 					"CType": {
 						"@class": "CType",
 						"@()": func(args, self) {
 							if (classType self == "Proto") {
 								if (len args == 1) {
-									ret { "@template": self, "cType": typeC(args[0]), "raw": args[0] };
+									ret { "@template": self, "cType": typeC(args[0]), "raw": args[0] }
 								} else if (len args == 2) {
-									ret { "@template": self, "cType": args[1], "raw": args[0] };
-								};
-							};
-						}
+									ret { "@template": self, "cType": args[1], "raw": args[0] }
+								}
+							}
+						},
 					},
 					"CFunction": {
 						"@class": "CFunction",
 						"@()": func(args, self) {
 							if (classType self == "Proto") {
-								ret { "@template": self, "id": args[0], "retType": args[1] };
+								ret { "@template": self, "id": args[0], "retType": args[1] }
 							} else if (classType self == "Instance") {
-								let tps = [];
+								let tps = []
 								loop &v in (args) {
 									if (type &v == "Hash") {
-										tps = append(tps, &v.cType);
-										&v = &v.raw;
+										tps = append(tps, &v.cType)
+										&v = &v.raw
 									} else {
-										tps = append(tps, typeC &v);
-									};
-								};
-								ret cdlCall(self.id, tps, args, self.retType);
-							};
-						}
+										tps = append(tps, typeC &v)
+									}
+								}
+								ret cdlCall(self.id, tps, args, self.retType)
+							}
+						},
 					},
 					"max": _ {
 						if (len(args) == 0) {
-							ret void;
+							ret void
 						};
 						if (len(args) == 1 and type(args[0]) == "Array") {
 							if (len(args[0]) == 0) {
-								ret void;
+								ret void
 							};
-							let maximum = args[0][0];
+							let maximum = args[0][0]
 							loop x in (args[0]) {
-								maximum = if (x > maximum) { x; } else { maximum; };
+								maximum = if (x > maximum) { x; } else { maximum; }
 							};
-							ret maximum;
+							ret maximum
 						} else {
-							ret #max(args);
+							ret #max(args)
 						};
 					},
 				
 					"min": _ {
 						if (len(args) == 0) {
-							ret void;
+							ret void
 						};
 						if (len(args) == 1 and type(args[0]) == "Array") {
 							if (len(args[0]) == 0) {
-								ret void;
-							};
+								ret void
+							}
 							let minimum = args[0][0];
 							loop x in (args[0]) {
-								minimum = if (x < minimum) { x; } else { minimum; };
-							};
-							ret minimum;
+								minimum = if (x < minimum) { x; } else { minimum; }
+							}
+							ret minimum
 						} else {
-							ret #min(args);
-						};
+							ret #min(args)
+						}
 					},
 				
 					"abs": _ {
 						if (len args != 1) {
-							ret void;
-						};
-						ret if (args[0] < 0) { -args[0]; } else { args[0]; };
+							ret void
+						}
+						ret if (args[0] < 0) { -args[0]; } else { args[0]; }
 					},
 				
 					"sqrt": _ {
 						if (len args != 1) {
-							ret void;
+							ret void
 						};
-						let L = 0;
-						let R = #max(1, args[0]);
+						let L = 0
+						let R = #max(1, args[0])
 						ret integer((loop (R - L >= 1e-12) {
-							let M = (L + R) / 2;
-							let K = M * M;
+							let M = (L + R) / 2
+							let K = M * M
 							if (#.abs(K - args[0]) <= 1e-12) {
-								out M;
+								out M
 							};
 							if (K > args[0]) {
-								R;
+								R
 							} else if (K < args[0]) {
-								L;
-							} = M;
-						} * 1e11 + 5) / 10) / 1e10;
+								L
+							} = M
+						} * 1e11 + 5) / 10) / 1e10
 					},
 				
 					"about": _ {
-						printLine();
-						printLine "TLang by mark07x";
-						printLine "T Language v0.1";
-						printLine "TLang Standard Library v0.1";
-						printLine();
-						printLine "Hello World, Mark!";
-						printLine();
-					}
+						printLine()
+						printLine "TLang by mark07x"
+						printLine "T Language v0.1"
+						printLine "TLang Standard Library v0.1"
+						printLine()
+						printLine "Hello World, Mark!"
+						printLine()
+					},
 				};`, SharedEnv))
 }
 

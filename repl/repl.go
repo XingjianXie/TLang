@@ -24,9 +24,9 @@ func Start(in io.Reader, out io.Writer) {
 			continue
 		}
 
-		line := scanner.Text()
-		for len(line) != 0 && line[len(line)-1] == '\\' {
-			line = line[:len(line)-1]
+		line := scanner.Text() + "\n"
+		for len(line) >= 2 && line[len(line) - 2] == '\\' {
+			line = line[:len(line) - 2] + "\n"
 			fmt.Printf(".. ")
 			scanned := scanner.Scan()
 			if !scanned {
@@ -34,7 +34,7 @@ func Start(in io.Reader, out io.Writer) {
 				scanner = bufio.NewScanner(in)
 				continue
 			}
-			line = line + scanner.Text()
+			line = line + scanner.Text() + "\n"
 		}
 		l := lexer.New(line)
 		p := parser.New(l)

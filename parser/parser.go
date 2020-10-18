@@ -442,6 +442,9 @@ func (p *Parser) parseHashLiteral() ast.Expression {
 
 	for !p.peekTokenIs(token.Rbrace) {
 		p.nextToken()
+		if p.curTokenIs(token.Rbrace) {
+			return hash
+		}
 		key := p.parseExpression(Lowest)
 
 		if !p.expectPeek(token.Colon) {
@@ -727,6 +730,9 @@ func (p *Parser) parseExpressionList(end token.Type) []ast.Expression {
 	for p.peekTokenIs(token.Comma) {
 		p.nextToken()
 		p.nextToken()
+		if p.curTokenIs(end) {
+			return list
+		}
 		list = append(list, p.parseExpression(Lowest))
 	}
 

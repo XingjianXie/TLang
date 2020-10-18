@@ -38,32 +38,39 @@ _
 		{token.Number, "1.0"},
 		{token.Eq, "=="},
 		{token.Number, "1."},
+		{token.Semicolon, "\n"},
 
 		{token.Number, ".2"},
 		{token.Eq, "=="},
 		{token.Minus, "-"},
 		{token.Number, "2e-04"},
+		{token.Semicolon, "\n"},
 
 		{token.Number, "3"},
 		{token.NotEq, "!="},
 		{token.Number, "3"},
+		{token.Semicolon, "\n"},
 
 		{token.Number, "4"},
 		{token.NotEq, "!="},
 		{token.Number, "4"},
+		{token.Semicolon, "\n"},
 
 		{token.Number, "5"},
 		{token.GtEq, ">="},
 		{token.Number, "5"},
+		{token.Semicolon, "\n"},
 
 		{token.Number, "6"},
 		{token.Gt, ">"},
 		{token.Number, "6"},
+		{token.Semicolon, "\n"},
 
 		{token.Number, "7"},
 		{token.Gt, ">"},
 		{token.Bang, "!"},
 		{token.Number, "7"},
+		{token.Semicolon, "\n"},
 
 		{token.Number, "8"},
 		{token.Lt, "<"},
@@ -73,25 +80,36 @@ _
 		{token.Number, "9"},
 		{token.SlashEq, "/="},
 		{token.Number, "9"},
+		{token.Semicolon, "\n"},
 
 		{token.Number, "10"},
 		{token.AsteriskEq, "*="},
 		{token.Number, "10"},
+		{token.Semicolon, "\n"},
 
 		{token.String, "Hello World"},
+		{token.Semicolon, "\n"},
 		{token.String, "123"},
+		{token.Semicolon, "\n"},
 		{token.String, "\\n"},
+		{token.Semicolon, "\n"},
 		{token.String, "\\\""},
+		{token.Semicolon, "\n"},
 		{token.String, ""},
+		{token.Semicolon, "\n"},
 
 		{token.Character, "x"},
+		{token.Semicolon, "\n"},
 		{token.Void, "void"},
+		{token.Semicolon, "\n"},
 		{token.True, "true"},
+		{token.Semicolon, "\n"},
 
 		{token.Lbracket, "["},
 		{token.Rbracket, "]"},
 		{token.Lbracket, "["},
 		{token.Rbracket, "]"},
+		{token.Semicolon, "\n"},
 
 		{token.Underline, "_"},
 

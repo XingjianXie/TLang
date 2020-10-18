@@ -10,10 +10,11 @@ type Lexer struct {
 	position     int  // current position in input (points to current char)
 	readPosition int  // current reading position in input (after current char)
 	ch           byte // current char under examination
+	lastToken    token.Token // last token
 }
 
 func New(input string) *Lexer {
-	l := &Lexer{input: input}
+	l := &Lexer{input: input + "\n"}
 	l.readChar()
 	return l
 }
@@ -132,6 +133,14 @@ func (l *Lexer) NextToken() token.Token {
 			tok = newToken(token.Gt, l.ch)
 		}
 
+	case '\n':
+		switch l.lastToken.Type {
+		case token.Ident, token.Number, token.String, token.Character, token.Rbrace, token.Rbracket, token.Rparen, token.Ret, token.Jump, token.Out, token.True, token.False, token.Void:
+			tok = newToken(token.Semicolon, l.ch)
+		default:
+			l.readChar()
+			return l.NextToken()
+		}
 	case ';':
 		tok = newToken(token.Semicolon, l.ch)
 	case ',':
@@ -154,6 +163,7 @@ func (l *Lexer) NextToken() token.Token {
 		if isDigit(l.peekChar()) {
 			tok.Literal = l.readNumber()
 			tok.Type = token.Number
+			l.lastToken = tok
 			return tok
 		}
 		tok = newToken(token.Dot, l.ch)
@@ -171,10 +181,12 @@ func (l *Lexer) NextToken() token.Token {
 		case isLetter(l.ch):
 			tok.Literal = l.readIdentifier()
 			tok.Type = token.LookupIdent(tok.Literal)
+			l.lastToken = tok
 			return tok
 		case isDigit(l.ch):
 			tok.Literal = l.readNumber()
 			tok.Type = token.Number
+			l.lastToken = tok
 			return tok
 		default:
 			tok = newToken(token.Illegal, l.ch)
@@ -182,11 +194,12 @@ func (l *Lexer) NextToken() token.Token {
 	}
 
 	l.readChar()
+	l.lastToken = tok
 	return tok
 }
 
 func (l *Lexer) skipWhitespace() {
-	for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' {
+	for l.ch == ' ' || l.ch == '\t' || l.ch == '\r' {
 		l.readChar()
 	}
 }

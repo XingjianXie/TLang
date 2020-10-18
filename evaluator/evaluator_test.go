@@ -604,7 +604,7 @@ func TestHashLiterals(t *testing.T) {
         "thr" + "ee": 6 + 2,
         4: 4,
         true: 5,
-        false: 6
+        false: 6,
     };`
 
 	evaluated := testEval(input)
@@ -692,7 +692,7 @@ let Person = {
 		let str = "";
 		str += "Class Name: " + self.@class + "\n";
 		str += "Person Name: " + self.name + "\n";
-	}
+	},
 };
 
 let Student = {
@@ -702,7 +702,7 @@ let Student = {
 		let str = "";
 		str += super(self, "@()")();
 		str += "School Name: " + self.school + "\n";
-	}
+	},
 };
 
 let c = {

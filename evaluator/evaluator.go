@@ -532,9 +532,6 @@ func init() {
 						}
 						ret rv
 					},
-					"printf": func(str, fmt) {
-						print(#f(str)(fmt))
-					},
 					"f": func(str) {
 						ret {
 							"@()": func(args) {

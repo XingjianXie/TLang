@@ -223,9 +223,6 @@ type Function struct {
 }
 
 func (f *Function) Inspect(num int, env *Environment) string {
-	if num <= 1 {
-		return "func(...) {...}"
-	}
 	var out bytes.Buffer
 
 	var params []string
@@ -237,7 +234,11 @@ func (f *Function) Inspect(num int, env *Environment) string {
 	out.WriteString("(")
 	out.WriteString(strings.Join(params, ", "))
 	out.WriteString(") ")
-	out.WriteString(f.Body.String())
+	if num <= 1 {
+		out.WriteString("{...}")
+	} else {
+		out.WriteString(f.Body.String())
+	}
 
 	return out.String()
 }

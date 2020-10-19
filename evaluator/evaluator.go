@@ -389,6 +389,17 @@ func init() {
 			return &String{Value: []rune(args[0].Type())}
 		}}),
 
+		"assert": makeObjectPointer(&Native{Fn: func(env *Environment, args []Object) Object {
+			if len(args) != 1 {
+				return newError("native function assert: len(args) should be 1")
+			}
+
+			if !isTruthy(UnwrapReferenceValue(args[0])) {
+				return newError("assert failed: " + args[0].Inspect(16, env))
+			}
+			return VoidObj
+		}}),
+
 		"type": makeObjectPointer(&Native{Fn: func(env *Environment, args []Object) Object {
 			if len(args) != 1 {
 				return newError("native function type: len(args) should be 1")

@@ -99,7 +99,7 @@ func (rs *RetStatement) String() string {
 
 	out.WriteString(rs.TokenLiteral())
 
-	if rs.RetValue != nil {
+	if _, ok := rs.RetValue.(*VoidLiteral); !ok {
 		out.WriteString(" " + rs.RetValue.String())
 	}
 
@@ -120,7 +120,7 @@ func (o *OutStatement) String() string {
 
 	out.WriteString(o.TokenLiteral())
 
-	if o.OutValue != nil {
+	if _, ok := o.OutValue.(*VoidLiteral); !ok {
 		out.WriteString(" " + o.OutValue.String())
 	}
 

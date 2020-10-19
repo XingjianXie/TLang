@@ -895,7 +895,7 @@ func TestCallExpressionParsing(t *testing.T) {
 	testLiteralExpression(t, exp.Arguments[0], 1)
 	testInfixExpression(t, exp.Arguments[1], 2, "*", 3)
 	testInfixExpression(t, exp.Arguments[2], 4, "+", 5)
-	if exp.String() != "add(1, (2 * 3), (4 + 5), if x { ret 3; } else { ret 4; })" {
+	if exp.String() != "add(1, (2 * 3), (4 + 5), if (x) { ret 3; } else { ret 4; })" {
 		t.Fatalf("wrong exp. got=%s", exp.String())
 	}
 }

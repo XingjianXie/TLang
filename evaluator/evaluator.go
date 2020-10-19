@@ -64,8 +64,11 @@ func init() {
 				return newError("native function cdlOpen: len(args) should be 1")
 			}
 			if str, ok := UnwrapReferenceValue(args[0]).(*String); ok {
-				return &Integer{Value: int64(uintptr(C.dlopen(C.CString(string(str.Value)), 1)))}
+				cstr := C.CString(string(str.Value))
+				defer C.free(unsafe.Pointer(cstr))
+				return &Integer{Value: int64(uintptr(C.dlopen(cstr, 1)))}
 			}
+
 			return newError("native function cdlOpen: arg should be String")
 		}}),
 		"cdlSym": makeObjectPointer(&Native{Fn: func(env *Environment, args []Object) Object {
@@ -74,8 +77,10 @@ func init() {
 			}
 			if i, ok := UnwrapReferenceValue(args[0]).(*Integer); ok {
 				if str, ok := UnwrapReferenceValue(args[1]).(*String); ok {
+					cstr := C.CString(string(str.Value))
+					defer C.free(unsafe.Pointer(cstr))
 					s := strconv.FormatInt(int64(uintptr(
-						C.dlsym(unsafe.Pointer(uintptr(i.Value)), C.CString(string(str.Value))),
+						C.dlsym(unsafe.Pointer(uintptr(i.Value)), cstr),
 					)), 10)
 					c := code(`
 						#.CFunction(`+s+`, "void");

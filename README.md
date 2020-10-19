@@ -124,6 +124,15 @@ This does not work
 - `float 4;` to convert 4 to float (4.0)
 - `boolean 3;` to convert 3 to boolean (true)
 #### Array
+##### append(arr, ele)
+```
+let a = []
+a = append(a, 1)
+a = append(a, 2)
+printLine a
+```
+This will print "[1, 2]"
+
 ##### array(len, first, nextFunc)
 nextFunc is defined as func(index, previousValue) { ret nextValue; }
 
@@ -228,7 +237,7 @@ printLine(classType mark);
 This will print "Instance"
 
 
-A hash with both "@template" key and "@class" key is an Proto (Sub-class)
+A hash with both "@template" key and "@class" key is a Proto (Sub-class)
 ```
 let markChild = {"@template": Mark, "@class": "MarkChild"}
 printLine(classType markChild);
@@ -236,6 +245,7 @@ printLine(classType markChild);
 This will print "Proto"
 #### Class Initializer
 Standard way to define a class with initializer
+Use @() and classType self == "Proto" to initialize class
 ```
 let People = {
     "@class": "People",
@@ -263,9 +273,8 @@ Output:
 Hi, I am Mark
 I am 17
 ```
-Use @() and classType self == "Proto" to initialize class
 
-
+Use super(self, name) to access the key on super class
 ```
 let Student = {
     "@class": "Student",
@@ -293,5 +302,4 @@ Hi, I am Zia
 I am 16
 I am from CNUHS
 ```
-Use super(self, name) to access the key on super class
 

@@ -32,7 +32,7 @@ This is a programming language based on "Monkey" in the book *Writing An Interpr
 - `let a = 1; let &b = a;` to define reference &b to a
 - `let a = [123, 456]; ref &b = a[0];` to define reference &b to a\[0]
 - `let a = { "hello": "world" }; ref &b = a.hello;` to define reference &b to a.hello
-- `lef &b = 1;` to define const reference &c to number 1 (this can be used as constant)
+- `lef &b = 1;` to define const reference &b to number 1 (this can be used as constant)
 #### Define Function Variable
 - `let f = func(a, b) { ret a + b; };` to define variable f with a function
 - `let f = func(a, b) { ret a + b; }; f(1, 2);` to call func with arguments 1 and 2, get 3

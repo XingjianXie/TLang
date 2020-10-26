@@ -47,7 +47,7 @@ This is a programming language based on "Monkey" in the book *Writing An Interpr
 #### Delete Variable / Reference
 - `let a = 1; del a;` to delete varibale a
 - `let a = 1; let &b = a; del &b;` to delete reference b
-- `let a = 1; let &b = a; del (&b);` to delete b's origin (a)
+- `let a = 1; let &b = a; del echo(&b);` to delete b's origin (a)
 #### Conditional Expression(Statement)
 - `if (condition) { ... };` to run code conditionally
 - `if (condition) { ... } else { ... };` if with else

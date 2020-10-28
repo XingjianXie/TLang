@@ -12,17 +12,10 @@
 #### Delete Variable / Reference
 <script id="asciicast-BLCVobocSt6XKIZtfCnHyvEVq" src="https://asciinema.org/a/BLCVobocSt6XKIZtfCnHyvEVq.js" async></script>
 #### Conditional Expression(Statement)
-- `if (condition) { ... };` to run code conditionally
-- `if (condition) { ... } else { ... };` if with else
-- `if (condition) { ... } else if (another condition) { ... } else {...};` full form of if
-- `let r = if (condition) { ...; value1; } else { ...; value2; };` to use if as expression
+<script id="asciicast-ZI5gULz2gWRrI9OJXpY0HZrli" src="https://asciinema.org/a/ZI5gULz2gWRrI9OJXpY0HZrli.js" async></script>
 #### Loop Expression(Statement)
-- `loop (condition) { ... };` loop until the condition is false
-- `loop v in (array) { ... };` loop in array
-- `jump;` start a new cycle
-- `out;` exit loop
-- `out 1;` exit loop with a out value integer 1
-- `let r = loop (condition) { ...; out value; ...; }` to use loop as expression, get out value
+<script id="asciicast-c9xlHx0jm0qaBh1yugIT9vESS" src="https://asciinema.org/a/c9xlHx0jm0qaBh1yugIT9vESS.js" async></script>
+<script id="asciicast-NNxxZSIQvJc10ZRxhARwOTJVa" src="https://asciinema.org/a/NNxxZSIQvJc10ZRxhARwOTJVa.js" async></script>
 #### Import / Export
 - `let export = ...` to export variable
 

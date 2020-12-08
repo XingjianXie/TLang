@@ -19,7 +19,7 @@ import (
 /*
 #cgo LDFLAGS: -lffi
 #include <dlfcn.h>
-#include <ffi.h>
+#include <ffi/ffi.h>
 #include <string.h>
 #include <memory.h>
 #include <stdlib.h>
